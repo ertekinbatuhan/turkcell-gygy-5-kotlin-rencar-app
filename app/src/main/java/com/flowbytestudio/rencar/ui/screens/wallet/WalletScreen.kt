@@ -70,6 +70,15 @@ fun WalletScreen() {
     ) {
         Spacer(modifier = Modifier.height(24.dp))
 
+        Text(
+            text = "Cüzdan",
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextPrimary,
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         BalanceCard(
             balance = "1.250,00 ₺",
             onAddFunds = {},
