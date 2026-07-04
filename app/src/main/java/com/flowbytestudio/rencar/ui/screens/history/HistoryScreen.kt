@@ -133,9 +133,12 @@ private fun RentalCard(rental: RentalUiModel) {
                     ) {
                         Text(
                             text = rental.vehicleLabel,
+                            modifier = Modifier.weight(1f),
                             fontSize = 17.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = TextPrimary,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                         )
                         Text(
                             text = "₺${"%.2f".format(rental.totalPrice)}",

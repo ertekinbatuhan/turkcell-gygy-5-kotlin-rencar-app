@@ -2,6 +2,7 @@ package com.flowbytestudio.rencar.data.network
 
 import com.flowbytestudio.rencar.data.auth.AuthApi
 import com.flowbytestudio.rencar.data.auth.AuthSession
+import com.flowbytestudio.rencar.data.rentals.RentalApi
 import com.flowbytestudio.rencar.data.vehicles.VehicleApi
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
@@ -48,4 +49,5 @@ object NetworkModule {
 
     val authApi: AuthApi by lazy { retrofit.create(AuthApi::class.java) }
     val vehicleApi: VehicleApi by lazy { retrofit.create(VehicleApi::class.java) }
+    val rentalApi: RentalApi by lazy { retrofit.create(RentalApi::class.java) }
 }

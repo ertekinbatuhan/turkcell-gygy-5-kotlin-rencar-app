@@ -1,65 +1,75 @@
 package com.flowbytestudio.rencar.ui.screens.history
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.flowbytestudio.rencar.data.rentals.RentalRepository
+import com.flowbytestudio.rencar.data.rentals.RentalWithVehicle
+import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
-class HistoryViewModel : ViewModel() {
+class HistoryViewModel(
+    private val rentalRepository: RentalRepository = RentalRepository(),
+) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(
-        HistoryUiState(
-            rentals = listOf(
-                RentalUiModel(
-                    id = "r1",
-                    vehicleId = "v1",
-                    vehicleLabel = "Renault Clio",
-                    startDate = "26 Haz 2026 · 14:32",
-                    endDate = "26 Haz 2026",
-                    totalPrice = 110.50,
-                    status = RentalStatus.COMPLETED,
-                    durationMinutes = 24,
-                    distanceKm = 12.4,
-                ),
-                RentalUiModel(
-                    id = "r2",
-                    vehicleId = "v2",
-                    vehicleLabel = "Fiat Egea",
-                    startDate = "24 Haz 2026 · 18:05",
-                    endDate = "24 Haz 2026",
-                    totalPrice = 86.00,
-                    status = RentalStatus.COMPLETED,
-                    durationMinutes = 18,
-                    distanceKm = 8.1,
-                ),
-                RentalUiModel(
-                    id = "r3",
-                    vehicleId = "v3",
-                    vehicleLabel = "Volkswagen Polo",
-                    startDate = "21 Haz 2026 · 09:48",
-                    endDate = "22 Haz 2026",
-                    totalPrice = 142.00,
-                    status = RentalStatus.CANCELLED,
-                    durationMinutes = 31,
-                    distanceKm = 19.6,
-                ),
-                RentalUiModel(
-                    id = "r4",
-                    vehicleId = "v1",
-                    vehicleLabel = "Renault Clio",
-                    startDate = "18 Haz 2026 · 20:14",
-                    endDate = "18 Haz 2026",
-                    totalPrice = 64.50,
-                    status = RentalStatus.COMPLETED,
-                    durationMinutes = 14,
-                    distanceKm = 6.2,
-                ),
-            ),
-        ),
-    )
+    private val _uiState = MutableStateFlow(HistoryUiState(isLoading = true))
     val uiState: StateFlow<HistoryUiState> = _uiState.asStateFlow()
 
-    // TODO: replace mock rentals with GET /rentals once a networking client exists.
-    // Note: real RentalResponseDto only has vehicleId — vehicleLabel needs a separate
-    // GET /vehicles/{id} lookup or a lightweight local cache, not a nested field.
+    init {
+        loadRentals()
+    }
+
+    private fun loadRentals() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            rentalRepository.getMyRentals()
+                .onSuccess { rentals ->
+                    _uiState.value = HistoryUiState(
+                        rentals = rentals
+                            .filter { it.rental.status != "ACTIVE" }
+                            .map { it.toUiModel() },
+                        isLoading = false,
+                    )
+                }
+                .onFailure { error ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = error.message,
+                    )
+                }
+        }
+    }
 }
+
+private val displayDateFormatter = DateTimeFormatter.ofPattern("d MMM yyyy · HH:mm", Locale("tr"))
+private val displayDateOnlyFormatter = DateTimeFormatter.ofPattern("d MMM yyyy", Locale("tr"))
+
+private fun formatDateTime(iso: String): String = runCatching {
+    OffsetDateTime.parse(iso).format(displayDateFormatter)
+}.getOrDefault(iso)
+
+private fun formatDateOnly(iso: String): String = runCatching {
+    OffsetDateTime.parse(iso).format(displayDateOnlyFormatter)
+}.getOrDefault(iso)
+
+// durationMinutes/distanceKm are mock-only: RentalResponseDto has no such fields.
+// Kept as placeholder values until the backend exposes trip telemetry.
+private fun RentalWithVehicle.toUiModel(): RentalUiModel = RentalUiModel(
+    id = rental.id,
+    vehicleId = rental.vehicleId,
+    vehicleLabel = vehicle?.let { "${it.brand} ${it.model}" } ?: rental.vehicleId,
+    startDate = formatDateTime(rental.startDate),
+    endDate = formatDateOnly(rental.endDate),
+    totalPrice = rental.totalPrice,
+    status = when (rental.status) {
+        "ACTIVE" -> RentalStatus.ACTIVE
+        "CANCELLED" -> RentalStatus.CANCELLED
+        else -> RentalStatus.COMPLETED
+    },
+    durationMinutes = 0,
+    distanceKm = 0.0,
+)
