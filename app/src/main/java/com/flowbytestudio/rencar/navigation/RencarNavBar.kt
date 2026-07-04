@@ -52,7 +52,7 @@ fun RencarNavBar(navController: NavController) {
                 label = {
                     Text(
                         text = item.label,
-                        fontSize = 11.sp,
+                        fontSize = 12.5.sp,
                         fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
                     )
                 },

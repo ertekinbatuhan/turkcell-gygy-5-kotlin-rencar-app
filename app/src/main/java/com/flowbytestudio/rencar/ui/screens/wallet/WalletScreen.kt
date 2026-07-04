@@ -66,7 +66,7 @@ fun WalletScreen() {
 
         Text(
             text = "Cüzdan",
-            fontSize = 28.sp,
+            fontSize = 29.5.sp,
             fontWeight = FontWeight.Bold,
             color = TextPrimary,
         )
@@ -168,7 +168,7 @@ private fun BalanceCard(
         Column {
             Text(
                 text = "Rencar bakiyesi",
-                fontSize = 14.sp,
+                fontSize = 15.5.sp,
                 color = Color.White.copy(alpha = 0.80f),
             )
 
@@ -176,7 +176,7 @@ private fun BalanceCard(
 
             Text(
                 text = balance,
-                fontSize = 38.sp,
+                fontSize = 39.5.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
             )
@@ -195,7 +195,7 @@ private fun BalanceCard(
                 Text(
                     text = "+ Bakiye Yükle",
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 15.sp,
+                    fontSize = 16.5.sp,
                     modifier = Modifier.padding(vertical = 2.dp),
                 )
             }
@@ -216,14 +216,14 @@ private fun SectionHeader(
     ) {
         Text(
             text = title,
-            fontSize = 16.sp,
+            fontSize = 17.5.sp,
             fontWeight = FontWeight.SemiBold,
             color = TextPrimary,
         )
         if (actionLabel != null) {
             Text(
                 text = actionLabel,
-                fontSize = 14.sp,
+                fontSize = 15.5.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Primary,
                 modifier = Modifier.clickable(onClick = onAction),
@@ -276,7 +276,7 @@ private fun SavedCardItem(
             when (cardType) {
                 CardType.VISA -> Text(
                     text = "VISA",
-                    fontSize = 11.sp,
+                    fontSize = 12.5.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
                     letterSpacing = 1.sp,
@@ -305,14 +305,14 @@ private fun SavedCardItem(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = "•••• $lastFour",
-                fontSize = 15.sp,
+                fontSize = 16.5.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = TextPrimary,
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = "Son kullanma $expiry",
-                fontSize = 13.sp,
+                fontSize = 14.5.sp,
                 color = TextSecondary,
             )
         }
@@ -326,7 +326,7 @@ private fun SavedCardItem(
             ) {
                 Text(
                     text = "Varsayılan",
-                    fontSize = 12.sp,
+                    fontSize = 13.5.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = DefaultBadgeText,
                 )
@@ -383,21 +383,21 @@ private fun TransactionItem(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                fontSize = 15.sp,
+                fontSize = 16.5.sp,
                 fontWeight = FontWeight.Medium,
                 color = TextPrimary,
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = subtitle,
-                fontSize = 13.sp,
+                fontSize = 14.5.sp,
                 color = TextSecondary,
             )
         }
 
         Text(
             text = amount,
-            fontSize = 15.sp,
+            fontSize = 16.5.sp,
             fontWeight = FontWeight.SemiBold,
             color = amountColor,
         )

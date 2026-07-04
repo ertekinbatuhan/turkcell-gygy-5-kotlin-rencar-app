@@ -170,14 +170,14 @@ private fun UserHeaderCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = name,
-                    fontSize = 17.sp,
+                    fontSize = 18.5.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = TextPrimary,
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = phone,
-                    fontSize = 14.sp,
+                    fontSize = 15.5.sp,
                     color = TextSecondary,
                 )
             }
@@ -233,13 +233,13 @@ private fun LicenseCard(licenseClass: String) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "Ehliyet doğrulandı",
-                    fontSize = 15.sp,
+                    fontSize = 16.5.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = TextPrimary,
                 )
                 Text(
                     text = licenseClass,
-                    fontSize = 13.sp,
+                    fontSize = 14.5.sp,
                     color = TextSecondary,
                 )
             }
@@ -252,7 +252,7 @@ private fun LicenseCard(licenseClass: String) {
             ) {
                 Text(
                     text = "Onaylı",
-                    fontSize = 13.sp,
+                    fontSize = 14.5.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Success,
                 )
@@ -297,7 +297,7 @@ private fun MenuItem(
         )
         Text(
             text = label,
-            fontSize = 15.sp,
+            fontSize = 16.5.sp,
             color = labelColor,
             modifier = Modifier.weight(1f),
         )
@@ -344,7 +344,7 @@ private fun LogoutCard(onClick: () -> Unit) {
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = "Çıkış yap",
-                fontSize = 15.sp,
+                fontSize = 16.5.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Danger,
             )
