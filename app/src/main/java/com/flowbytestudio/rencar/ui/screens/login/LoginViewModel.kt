@@ -1,13 +1,18 @@
 package com.flowbytestudio.rencar.ui.screens.login
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flowbytestudio.rencar.data.auth.AuthRepository
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
+import java.io.IOException
 
 class LoginViewModel(
     private val repository: AuthRepository = AuthRepository(),
@@ -16,61 +21,134 @@ class LoginViewModel(
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
+    private var timerJob: Job? = null
+
     fun onPhoneChange(phone: String) {
-        _uiState.update { it.copy(phone = phone, error = null) }
+        val digitsOnly = phone.filter { it.isDigit() }
+        if (digitsOnly.length <= 10) {
+            _uiState.update { it.copy(phone = digitsOnly, error = null) }
+        }
     }
 
     fun onCodeChange(code: String) {
-        _uiState.update { it.copy(code = code, error = null) }
+        val digitsOnly = code.filter { it.isDigit() }
+        if (digitsOnly.length <= 6) {
+            _uiState.update { it.copy(code = digitsOnly, error = null) }
+        }
     }
 
     fun onRequestOtp() {
-        val phone = _uiState.value.phone.trim()
-        if (phone.isBlank()) {
-            _uiState.update { it.copy(error = "Telefon numaranızı girin.") }
+        val phoneDigits = _uiState.value.phone
+        if (phoneDigits.length < 10) {
+            _uiState.update { it.copy(error = "Lütfen 10 haneli telefon numaranızı girin.") }
             return
         }
+
+        // Swagger: phone must be in +90 format
+        val fullPhone = "+90$phoneDigits"
+        Log.d("RencarAuth", "Login Request: phone=$fullPhone")
+
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-            repository.requestOtp(phone)
-                .onSuccess {
-                    _uiState.update { it.copy(isLoading = false, step = LoginStep.OTP) }
-                }
-                .onFailure { throwable ->
-                    _uiState.update {
-                        it.copy(isLoading = false, error = throwable.toUserMessage())
+            try {
+                repository.requestOtp(fullPhone)
+                    .onSuccess {
+                        Log.d("RencarAuth", "Login Success: phone=$fullPhone, status=200")
+                        _uiState.update { 
+                            it.copy(
+                                isLoading = false, 
+                                step = LoginStep.OTP,
+                                timerSeconds = 60,
+                                canResendOtp = false
+                            ) 
+                        }
+                        startTimer()
                     }
+                    .onFailure { throwable ->
+                        val statusCode = (throwable as? HttpException)?.code()
+                        Log.e("RencarAuth", "Login Failure: phone=$fullPhone, status=$statusCode", throwable)
+                        
+                        val errorMessage = when {
+                            throwable is IOException -> "Bağlantı hatası oluştu."
+                            statusCode == 401 -> "Bu telefon numarasına kayıtlı kullanıcı yok."
+                            else -> "Kod gönderilemedi. Telefon numarasını kontrol et."
+                        }
+                        _uiState.update { it.copy(isLoading = false, error = errorMessage) }
+                    }
+            } catch (e: Exception) {
+                Log.e("RencarAuth", "Login Exception: phone=$fullPhone", e)
+                _uiState.update {
+                    it.copy(isLoading = false, error = "Bağlantı hatası oluştu.")
                 }
+            } finally {
+                _uiState.update { it.copy(isLoading = false) }
+            }
+        }
+    }
+
+    private fun startTimer() {
+        timerJob?.cancel()
+        timerJob = viewModelScope.launch {
+            while (_uiState.value.timerSeconds > 0) {
+                delay(1000L)
+                _uiState.update { it.copy(timerSeconds = it.timerSeconds - 1) }
+            }
+            _uiState.update { it.copy(canResendOtp = true) }
         }
     }
 
     fun onVerifyOtp() {
-        val phone = _uiState.value.phone.trim()
-        val code = _uiState.value.code.trim()
+        val phoneDigits = _uiState.value.phone
+        val fullPhone = "+90$phoneDigits"
+        val code = _uiState.value.code
+        
         if (code.length != 6) {
             _uiState.update { it.copy(error = "6 haneli kodu eksiksiz girin.") }
             return
         }
+        
+        Log.d("RencarAuth", "Verify Request: phone=$fullPhone, code=$code")
+
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-            repository.verifyOtp(phone, code)
-                .onSuccess {
-                    _uiState.update { it.copy(isLoading = false, isLoggedIn = true) }
-                }
-                .onFailure { throwable ->
-                    _uiState.update {
-                        it.copy(isLoading = false, error = throwable.toUserMessage())
+            try {
+                repository.verifyOtp(fullPhone, code)
+                    .onSuccess {
+                        Log.d("RencarAuth", "Verify Success: phone=$fullPhone, status=200")
+                        _uiState.update { it.copy(isLoading = false, isLoggedIn = true) }
                     }
+                    .onFailure { throwable ->
+                        val statusCode = (throwable as? HttpException)?.code()
+                        Log.e("RencarAuth", "Verify Failure: phone=$fullPhone, code=$code, status=$statusCode", throwable)
+                        
+                        val errorMessage = if (throwable is IOException) {
+                            "Bağlantı hatası oluştu."
+                        } else {
+                            "Kod hatalı veya süresi dolmuş."
+                        }
+                        _uiState.update { it.copy(isLoading = false, error = errorMessage) }
+                    }
+            } catch (e: Exception) {
+                Log.e("RencarAuth", "Verify Exception: phone=$fullPhone", e)
+                _uiState.update {
+                    it.copy(isLoading = false, error = "Bağlantı hatası oluştu.")
                 }
+            } finally {
+                _uiState.update { it.copy(isLoading = false) }
+            }
         }
     }
 
     fun onChangePhone() {
-        _uiState.update { it.copy(step = LoginStep.PHONE, code = "", error = null) }
-    }
-
-    private fun Throwable.toUserMessage(): String = when {
-        message?.contains("401") == true -> "Kod hatalı, süresi dolmuş veya bu numara kayıtlı değil."
-        else -> "Bir şeyler ters gitti. Lütfen tekrar deneyin."
+        timerJob?.cancel()
+        _uiState.update { 
+            it.copy(
+                step = LoginStep.PHONE, 
+                code = "", 
+                error = null,
+                timerSeconds = 0,
+                canResendOtp = false
+            ) 
+        }
     }
 }

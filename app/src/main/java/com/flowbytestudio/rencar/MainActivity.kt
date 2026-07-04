@@ -12,13 +12,18 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavDestination.Companion.hasRoute
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.flowbytestudio.rencar.data.auth.AuthSession
 import com.flowbytestudio.rencar.navigation.AppNavGraph
+import com.flowbytestudio.rencar.navigation.LoginRoute
+import com.flowbytestudio.rencar.navigation.OnboardingRoute
 import com.flowbytestudio.rencar.navigation.RencarNavBar
 import com.flowbytestudio.rencar.navigation.ReservationRoute
 import com.flowbytestudio.rencar.ui.screens.login.LoginScreen
+import com.flowbytestudio.rencar.ui.screens.onboarding.OnboardingScreen
 import com.flowbytestudio.rencar.ui.theme.RencarTheme
 
 class MainActivity : ComponentActivity() {
@@ -38,7 +43,27 @@ private fun RencarApp() {
     val isLoggedIn by AuthSession.isLoggedIn.collectAsState()
 
     if (!isLoggedIn) {
-        LoginScreen(onLoggedIn = {})
+        val authNavController = rememberNavController()
+
+        NavHost(
+            navController = authNavController,
+            startDestination = OnboardingRoute,
+        ) {
+            composable<OnboardingRoute> {
+                OnboardingScreen(
+                    onStartClick = { authNavController.navigate(LoginRoute) },
+                    onLoginClick = { authNavController.navigate(LoginRoute) },
+                )
+            }
+
+            composable<LoginRoute> {
+                LoginScreen(
+                    onLoggedIn = { /* AuthSession handles state */ },
+                    onBack = { authNavController.popBackStack() },
+                )
+            }
+        }
+
         return
     }
 
@@ -48,7 +73,11 @@ private fun RencarApp() {
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        bottomBar = { if (showBottomBar) RencarNavBar(navController = navController) },
+        bottomBar = {
+            if (showBottomBar) {
+                RencarNavBar(navController = navController)
+            }
+        },
     ) { innerPadding ->
         AppNavGraph(
             navController = navController,
