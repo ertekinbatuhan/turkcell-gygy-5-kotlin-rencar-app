@@ -21,7 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.automirrored.outlined.Logout
-import androidx.compose.material.icons.outlined.CardMembership
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.CreditCard
 import androidx.compose.material.icons.outlined.Edit
@@ -84,7 +84,7 @@ private fun ProfileContent(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp),
     ) {
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         UserHeaderCard(
             name = uiState.name,
@@ -139,64 +139,58 @@ private fun UserHeaderCard(
     phone: String,
     onEditClick: () -> Unit,
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = Color.White,
-        shadowElevation = 0.dp,
-        tonalElevation = 0.dp,
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        Box(
+            modifier = Modifier
+                .size(64.dp)
+                .clip(CircleShape)
+                .background(Color(0xFFE8E0F0)),
+            contentAlignment = Alignment.Center,
         ) {
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFFE8E0F0)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.CardMembership,
-                    contentDescription = null,
-                    tint = Color(0xFF9C72CB),
-                    modifier = Modifier.size(32.dp),
-                )
-            }
+            Icon(
+                imageVector = Icons.Outlined.Person,
+                contentDescription = null,
+                tint = Color(0xFF9C72CB),
+                modifier = Modifier.size(34.dp),
+            )
+        }
 
-            Spacer(modifier = Modifier.width(14.dp))
+        Spacer(modifier = Modifier.width(14.dp))
 
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = name,
-                    fontSize = 18.5.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary,
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = phone,
-                    fontSize = 15.5.sp,
-                    color = TextSecondary,
-                )
-            }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = name,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = TextPrimary,
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = phone,
+                fontSize = 15.sp,
+                color = TextSecondary,
+            )
+        }
 
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(Background)
-                    .clickable(onClick = onEditClick),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Edit,
-                    contentDescription = "Düzenle",
-                    tint = TextSecondary,
-                    modifier = Modifier.size(18.dp),
-                )
-            }
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color.White)
+                .clickable(onClick = onEditClick),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Edit,
+                contentDescription = "Düzenle",
+                tint = TextSecondary,
+                modifier = Modifier.size(18.dp),
+            )
         }
     }
 }
