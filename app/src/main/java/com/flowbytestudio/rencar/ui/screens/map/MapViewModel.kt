@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
 
 class MapViewModel(
     private val repository: VehicleRepository = VehicleRepository(),
@@ -34,10 +35,7 @@ class MapViewModel(
                 }
                 .onFailure { throwable ->
                     _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            error = "Araçlar yüklenemedi. ${throwable.message.orEmpty()}".trim(),
-                        )
+                        it.copy(isLoading = false, error = throwable.toVehicleLoadErrorMessage())
                     }
                 }
         }
@@ -58,6 +56,14 @@ class MapViewModel(
         _uiState.update { it.copy(focusedVehicleId = nearest?.id) }
         return nearest
     }
+}
+
+private fun Throwable.toVehicleLoadErrorMessage(): String = when {
+    this is HttpException && code() == 403 ->
+        "Araçları görüntüleyebilmek için hesabının onaylanmış olması gerekiyor."
+    this is HttpException && code() == 401 ->
+        "Oturumun sona ermiş. Lütfen tekrar giriş yap."
+    else -> "Araçlar yüklenemedi. Lütfen tekrar dene."
 }
 
 private fun haversineMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
