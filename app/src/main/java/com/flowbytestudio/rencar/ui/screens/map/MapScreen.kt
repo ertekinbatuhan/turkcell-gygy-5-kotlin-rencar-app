@@ -30,6 +30,7 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Snackbar
@@ -37,6 +38,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -61,6 +63,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.flowbytestudio.rencar.data.vehicles.VehicleDto
 import com.flowbytestudio.rencar.ui.theme.Background
 import com.flowbytestudio.rencar.ui.theme.Danger
 import com.flowbytestudio.rencar.ui.theme.Primary
@@ -72,6 +75,7 @@ import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.geometry.LatLngBounds
 import org.maplibre.android.location.LocationComponentActivationOptions
 import org.maplibre.android.location.modes.CameraMode
 import org.maplibre.android.maps.MapLibreMap
@@ -108,6 +112,7 @@ private const val OSM_RASTER_STYLE = """
 }
 """
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapScreen(viewModel: MapViewModel = viewModel()) {
     val uiState by viewModel.uiState.collectAsState()
@@ -116,6 +121,8 @@ fun MapScreen(viewModel: MapViewModel = viewModel()) {
     val density = context.resources.displayMetrics.density
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    val sheetState = rememberModalBottomSheetState()
+    var selectedVehicle by remember { mutableStateOf<VehicleDto?>(null) }
 
     var hasLocationPermission by remember {
         mutableStateOf(
@@ -240,11 +247,7 @@ fun MapScreen(viewModel: MapViewModel = viewModel()) {
                     val vehicleId = symbol.data?.asString
                     val vehicle = viewModel.uiState.value.vehicles.find { it.id == vehicleId }
                     if (vehicle != null) {
-                        scope.launch {
-                            snackbarHostState.showSnackbar(
-                                "${vehicle.brand} ${vehicle.model} · ₺${vehicle.pricePerDay.toInt()}/gün",
-                            )
-                        }
+                        selectedVehicle = vehicle
                     }
                     true
                 }
@@ -299,7 +302,10 @@ fun MapScreen(viewModel: MapViewModel = viewModel()) {
         BottomVehiclesCard(
             modifier = Modifier.align(Alignment.BottomCenter),
             uiState = uiState,
-            onTypeSelected = viewModel::onTypeSelected,
+            onTypeSelected = { type ->
+                viewModel.onTypeSelected(type)
+                focusCameraOnVehicles(mapLibreMap, viewModel.uiState.value.filteredVehicles)
+            },
             onFindNearestClick = {
                 val location = mapLibreMap?.locationComponent?.lastKnownLocation
                 if (location == null) {
@@ -326,7 +332,46 @@ fun MapScreen(viewModel: MapViewModel = viewModel()) {
         ) { data ->
             Snackbar(snackbarData = data)
         }
+
+        val vehicle = selectedVehicle
+        if (vehicle != null) {
+            val userLocation = mapLibreMap?.locationComponent?.lastKnownLocation
+            val distanceLabel = userLocation?.let {
+                formatDistanceMeters(haversineMeters(it.latitude, it.longitude, vehicle.latitude, vehicle.longitude))
+            }
+            VehicleDetailSheet(
+                vehicle = vehicle,
+                distanceLabel = distanceLabel,
+                sheetState = sheetState,
+                onDismiss = { selectedVehicle = null },
+                onReserve = {
+                    selectedVehicle = null
+                    scope.launch { snackbarHostState.showSnackbar("Rezervasyon yakında eklenecek.") }
+                },
+                onUnlock = {
+                    selectedVehicle = null
+                    scope.launch { snackbarHostState.showSnackbar("Kilit açma yakında eklenecek.") }
+                },
+            )
+        }
     }
+}
+
+private fun focusCameraOnVehicles(map: MapLibreMap?, vehicles: List<VehicleDto>) {
+    if (map == null || vehicles.isEmpty()) return
+    if (vehicles.size == 1) {
+        val vehicle = vehicles.first()
+        map.easeCamera(CameraUpdateFactory.newLatLngZoom(LatLng(vehicle.latitude, vehicle.longitude), 15.0), 700)
+        return
+    }
+    val bounds = LatLngBounds.fromLatLngs(vehicles.map { LatLng(it.latitude, it.longitude) })
+    map.easeCamera(CameraUpdateFactory.newLatLngBounds(bounds, 120), 700)
+}
+
+private fun formatDistanceMeters(meters: Double): String = if (meters < 1000) {
+    "${meters.toInt()} m"
+} else {
+    "%.1f km".format(meters / 1000)
 }
 
 private fun enableLocationComponent(context: android.content.Context, map: MapLibreMap, style: Style) {
