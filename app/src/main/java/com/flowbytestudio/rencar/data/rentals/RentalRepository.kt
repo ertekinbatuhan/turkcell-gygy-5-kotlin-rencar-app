@@ -16,4 +16,8 @@ class RentalRepository(
             RentalWithVehicle(rental = rental, vehicle = vehiclesById[rental.vehicleId])
         }
     }
+
+    suspend fun createRental(vehicleId: String, endDate: String): Result<RentalDto> = runCatching {
+        api.createRental(CreateRentalRequest(vehicleId = vehicleId, endDate = endDate))
+    }
 }

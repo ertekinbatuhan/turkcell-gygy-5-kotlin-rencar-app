@@ -15,6 +15,12 @@ data class RentalDto(
     val createdAt: String,
 )
 
+@Serializable
+data class CreateRentalRequest(
+    val vehicleId: String,
+    val endDate: String,
+)
+
 data class RentalWithVehicle(
     val rental: RentalDto,
     val vehicle: VehicleDto?,

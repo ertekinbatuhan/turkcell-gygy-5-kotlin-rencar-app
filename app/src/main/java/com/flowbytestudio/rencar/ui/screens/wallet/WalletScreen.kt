@@ -23,10 +23,12 @@ import androidx.compose.material.icons.outlined.DirectionsCar
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,6 +38,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.flowbytestudio.rencar.ui.theme.Background
 import com.flowbytestudio.rencar.ui.theme.Danger
 import com.flowbytestudio.rencar.ui.theme.Primary
@@ -54,7 +58,9 @@ private val DefaultBadgeText = Color(0xFF3D7BF4)
 private val DangerLight = Color(0xFFFFEDED)
 
 @Composable
-fun WalletScreen() {
+fun WalletScreen(viewModel: WalletViewModel = viewModel()) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -114,26 +120,49 @@ fun WalletScreen() {
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        TransactionsCard {
-            TransactionItem(
-                icon = Icons.Outlined.DirectionsCar,
-                iconBg = DangerLight,
-                iconTint = Danger,
-                title = "Renault Clio kiralama",
-                subtitle = "Bugün · 14:32",
-                amount = "-₺110,50",
-                amountColor = TextPrimary,
-            )
-            CardDivider()
-            TransactionItem(
-                icon = Icons.Outlined.KeyboardArrowUp,
-                iconBg = SuccessLight,
-                iconTint = Success,
-                title = "Bakiye yükleme",
-                subtitle = "Dün · 09:10",
-                amount = "+₺200,00",
-                amountColor = Success,
-            )
+        when {
+            uiState.isLoading -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 24.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(color = Primary)
+                }
+            }
+            uiState.errorMessage != null -> {
+                Text(
+                    text = uiState.errorMessage ?: "İşlemler yüklenemedi",
+                    fontSize = 14.5.sp,
+                    color = Danger,
+                )
+            }
+            uiState.transactions.isEmpty() -> {
+                Text(
+                    text = "Henüz bir işlemin yok",
+                    fontSize = 14.5.sp,
+                    color = TextSecondary,
+                )
+            }
+            else -> {
+                TransactionsCard {
+                    uiState.transactions.forEachIndexed { index, transaction ->
+                        TransactionItem(
+                            icon = Icons.Outlined.DirectionsCar,
+                            iconBg = DangerLight,
+                            iconTint = Danger,
+                            title = transaction.title,
+                            subtitle = transaction.date,
+                            amount = "${if (transaction.amount >= 0) "+" else "-"}₺${"%.2f".format(kotlin.math.abs(transaction.amount))}",
+                            amountColor = if (transaction.amount >= 0) Success else TextPrimary,
+                        )
+                        if (index != uiState.transactions.lastIndex) {
+                            CardDivider()
+                        }
+                    }
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(32.dp))
