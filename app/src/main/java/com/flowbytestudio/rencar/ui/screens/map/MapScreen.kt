@@ -114,7 +114,10 @@ private const val OSM_RASTER_STYLE = """
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MapScreen(viewModel: MapViewModel = viewModel()) {
+fun MapScreen(
+    onNavigateToReservation: (String) -> Unit = {},
+    viewModel: MapViewModel = viewModel(),
+) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -346,7 +349,7 @@ fun MapScreen(viewModel: MapViewModel = viewModel()) {
                 onDismiss = { selectedVehicle = null },
                 onReserve = {
                     selectedVehicle = null
-                    scope.launch { snackbarHostState.showSnackbar("Rezervasyon yakında eklenecek.") }
+                    onNavigateToReservation(vehicle.id)
                 },
                 onUnlock = {
                     selectedVehicle = null
