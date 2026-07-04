@@ -66,7 +66,7 @@ private fun Throwable.toVehicleLoadErrorMessage(): String = when {
     else -> "Araçlar yüklenemedi. Lütfen tekrar dene."
 }
 
-private fun haversineMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+fun haversineMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
     val earthRadiusMeters = 6371000.0
     val dLat = Math.toRadians(lat2 - lat1)
     val dLon = Math.toRadians(lon2 - lon1)

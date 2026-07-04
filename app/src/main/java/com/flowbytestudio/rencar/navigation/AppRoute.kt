@@ -13,3 +13,6 @@ data object WalletRoute
 
 @Serializable
 data object ProfileRoute
+
+@Serializable
+data class ReservationRoute(val vehicleId: String)

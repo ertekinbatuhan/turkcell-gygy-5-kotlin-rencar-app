@@ -11,10 +11,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavDestination.Companion.hasRoute
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.flowbytestudio.rencar.data.auth.AuthSession
 import com.flowbytestudio.rencar.navigation.AppNavGraph
 import com.flowbytestudio.rencar.navigation.RencarNavBar
+import com.flowbytestudio.rencar.navigation.ReservationRoute
 import com.flowbytestudio.rencar.ui.screens.login.LoginScreen
 import com.flowbytestudio.rencar.ui.theme.RencarTheme
 
@@ -40,10 +43,12 @@ private fun RencarApp() {
     }
 
     val navController = rememberNavController()
+    val currentDestination = navController.currentBackStackEntryAsState().value?.destination
+    val showBottomBar = currentDestination?.hasRoute(ReservationRoute::class) != true
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        bottomBar = { RencarNavBar(navController = navController) },
+        bottomBar = { if (showBottomBar) RencarNavBar(navController = navController) },
     ) { innerPadding ->
         AppNavGraph(
             navController = navController,
