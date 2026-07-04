@@ -3,13 +3,13 @@ package com.flowbytestudio.rencar.navigation
 import kotlinx.serialization.Serializable
 
 @Serializable
- data object MapRoute
- 
-@Serializable 
+data object MapRoute
+
+@Serializable
 data object HistoryRoute
 
-@Serializable 
+@Serializable
 data object WalletRoute
 
-@Serializable 
+@Serializable
 data object ProfileRoute
