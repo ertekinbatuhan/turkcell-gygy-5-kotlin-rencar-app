@@ -15,6 +15,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -25,7 +27,7 @@ import androidx.compose.ui.unit.sp
 import com.flowbytestudio.rencar.ui.theme.BgLight
 import com.flowbytestudio.rencar.ui.theme.BorderLight
 import com.flowbytestudio.rencar.ui.theme.Primary
-import com.flowbytestudio.rencar.ui.theme.Surface
+import com.flowbytestudio.rencar.ui.theme.PrimaryVariant
 import com.flowbytestudio.rencar.ui.theme.TextPrimary
 import com.flowbytestudio.rencar.ui.theme.TextSecondary
 
@@ -46,20 +48,31 @@ fun OnboardingScreen(
         ) {
             Spacer(modifier = Modifier.weight(1f))
 
-            // Logo Box
-            Box(
-                modifier = Modifier
-                    .size(100.dp)
-                    .clip(RoundedCornerShape(28.dp))
-                    .background(Surface),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.DirectionsCar,
-                    contentDescription = null,
-                    tint = Primary,
-                    modifier = Modifier.size(56.dp)
+            // Soft glow + Logo Box
+            Box(contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier
+                        .size(220.dp)
+                        .background(
+                            Brush.radialGradient(
+                                colors = listOf(Primary.copy(alpha = 0.18f), Color.Transparent),
+                            ),
+                        ),
                 )
+                Box(
+                    modifier = Modifier
+                        .size(100.dp)
+                        .clip(RoundedCornerShape(28.dp))
+                        .background(Brush.linearGradient(colors = listOf(PrimaryVariant, Primary))),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.DirectionsCar,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(56.dp),
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(32.dp))

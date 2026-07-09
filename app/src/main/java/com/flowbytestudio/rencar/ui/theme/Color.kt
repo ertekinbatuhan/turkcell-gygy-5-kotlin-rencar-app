@@ -7,6 +7,7 @@ import androidx.compose.ui.graphics.Color
 /** Semantic color tokens used across Rencar screens, provided per light/dark theme. */
 data class RencarColorScheme(
     val primary: Color,
+    val primaryVariant: Color,
     val primaryLight: Color,
     val bgLight: Color,
     val success: Color,
@@ -24,6 +25,7 @@ data class RencarColorScheme(
 
 val LightRencarColors = RencarColorScheme(
     primary = Color(0xFF0B6BCB),
+    primaryVariant = Color(0xFF1E7FE0),
     primaryLight = Color(0xFFEEF3FF),
     bgLight = Color(0xFFF1F4F8),
     success = Color(0xFF22C55E),
@@ -41,6 +43,7 @@ val LightRencarColors = RencarColorScheme(
 
 val DarkRencarColors = RencarColorScheme(
     primary = Color(0xFF4C95F0),
+    primaryVariant = Color(0xFF3B8EF0),
     primaryLight = Color(0xFF14233A),
     bgLight = Color(0xFF171C24),
     success = Color(0xFF34C98A),
@@ -62,6 +65,7 @@ val LocalRencarColors = compositionLocalOf { LightRencarColors }
 // screens written against "Background", "TextPrimary", etc. automatically follow the
 // active theme without needing to be rewritten to read a CompositionLocal directly.
 val Primary: Color @Composable get() = LocalRencarColors.current.primary
+val PrimaryVariant: Color @Composable get() = LocalRencarColors.current.primaryVariant
 val PrimaryLight: Color @Composable get() = LocalRencarColors.current.primaryLight
 val BgLight: Color @Composable get() = LocalRencarColors.current.bgLight
 val Success: Color @Composable get() = LocalRencarColors.current.success
