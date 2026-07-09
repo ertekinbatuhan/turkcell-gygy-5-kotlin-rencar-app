@@ -1,7 +1,9 @@
 package com.flowbytestudio.rencar.ui.screens.map
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
+import android.os.Looper
 import android.view.Gravity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -62,6 +64,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.flowbytestudio.rencar.data.vehicles.VehicleDto
 import com.flowbytestudio.rencar.ui.theme.Background
@@ -69,15 +72,20 @@ import com.flowbytestudio.rencar.ui.theme.Danger
 import com.flowbytestudio.rencar.ui.theme.Primary
 import com.flowbytestudio.rencar.ui.theme.TextPrimary
 import com.flowbytestudio.rencar.ui.theme.TextSecondary
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import com.google.gson.JsonPrimitive
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.geometry.LatLngBounds
-import org.maplibre.android.location.LocationComponentActivationOptions
-import org.maplibre.android.location.modes.CameraMode
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
@@ -85,9 +93,17 @@ import org.maplibre.android.plugins.annotation.OnSymbolClickListener
 import org.maplibre.android.plugins.annotation.Symbol
 import org.maplibre.android.plugins.annotation.SymbolManager
 import org.maplibre.android.plugins.annotation.SymbolOptions
+import org.maplibre.android.style.layers.CircleLayer
+import org.maplibre.android.style.layers.PropertyFactory
+import org.maplibre.android.style.sources.GeoJsonSource
+import org.maplibre.geojson.FeatureCollection
+import org.maplibre.geojson.Point
 
 private const val ISTANBUL_LAT = 41.0082
 private const val ISTANBUL_LON = 28.9784
+private const val VEHICLE_REFRESH_INTERVAL_MS = 10_000L
+private const val ME_SOURCE_ID = "me"
+private val ME_MARKER_COLOR = android.graphics.Color.parseColor("#4285F4")
 
 private const val OSM_RASTER_STYLE = """
 {
@@ -146,11 +162,36 @@ fun MapScreen(
         }
     }
 
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) {
+                delay(VEHICLE_REFRESH_INTERVAL_MS)
+                viewModel.loadVehicles()
+            }
+        }
+    }
+
+    var myLocation by remember { mutableStateOf<LatLng?>(null) }
+    val fusedClient = remember { LocationServices.getFusedLocationProviderClient(context) }
+
+    DisposableEffect(hasLocationPermission) {
+        if (!hasLocationPermission) return@DisposableEffect onDispose {}
+
+        val callback = object : LocationCallback() {
+            override fun onLocationResult(result: LocationResult) {
+                result.lastLocation?.let { loc -> myLocation = LatLng(loc.latitude, loc.longitude) }
+            }
+        }
+        startLocationUpdates(fusedClient, callback)
+        onDispose { fusedClient.removeLocationUpdates(callback) }
+    }
+
     var mapView by remember { mutableStateOf<MapView?>(null) }
     var mapLibreMap by remember { mutableStateOf<MapLibreMap?>(null) }
     var mapStyle by remember { mutableStateOf<Style?>(null) }
     var symbolManager by remember { mutableStateOf<SymbolManager?>(null) }
     var hasCenteredOnVehicles by remember { mutableStateOf(false) }
+    var hasZoomedToUser by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         AndroidView(
@@ -168,13 +209,27 @@ fun MapScreen(
                             .zoom(12.0)
                             .build()
                         map.setStyle(Style.Builder().fromJson(OSM_RASTER_STYLE)) { style ->
+                            style.addSource(GeoJsonSource(ME_SOURCE_ID))
+                            style.addLayer(
+                                CircleLayer("me-halo-layer", ME_SOURCE_ID).withProperties(
+                                    PropertyFactory.circleColor(ME_MARKER_COLOR),
+                                    PropertyFactory.circleRadius(20f),
+                                    PropertyFactory.circleOpacity(0.2f),
+                                    PropertyFactory.circleBlur(0.4f),
+                                ),
+                            )
+                            style.addLayer(
+                                CircleLayer("me-layer", ME_SOURCE_ID).withProperties(
+                                    PropertyFactory.circleColor(ME_MARKER_COLOR),
+                                    PropertyFactory.circleRadius(9f),
+                                    PropertyFactory.circleStrokeColor(android.graphics.Color.WHITE),
+                                    PropertyFactory.circleStrokeWidth(3f),
+                                ),
+                            )
                             mapStyle = style
                             symbolManager = SymbolManager(this, map, style).apply {
                                 iconAllowOverlap = true
                                 iconIgnorePlacement = true
-                            }
-                            if (hasLocationPermission) {
-                                enableLocationComponent(ctx, map, style)
                             }
                         }
                     }
@@ -203,12 +258,17 @@ fun MapScreen(
             }
         }
 
-        LaunchedEffect(hasLocationPermission, mapLibreMap, mapStyle) {
-            val map = mapLibreMap
-            val style = mapStyle
-            if (hasLocationPermission && map != null && style != null && !map.locationComponent.isLocationComponentEnabled) {
-                enableLocationComponent(context, map, style)
-            }
+        LaunchedEffect(mapStyle, myLocation) {
+            val style = mapStyle ?: return@LaunchedEffect
+            updateMeMarker(style, myLocation)
+        }
+
+        LaunchedEffect(mapLibreMap, myLocation) {
+            if (hasZoomedToUser) return@LaunchedEffect
+            val map = mapLibreMap ?: return@LaunchedEffect
+            val location = myLocation ?: return@LaunchedEffect
+            hasZoomedToUser = true
+            map.animateCamera(CameraUpdateFactory.newLatLngZoom(location, 15.0))
         }
 
         LaunchedEffect(uiState.filteredVehicles, mapStyle, symbolManager) {
@@ -282,12 +342,9 @@ fun MapScreen(
         IconButton(
             onClick = {
                 val map = mapLibreMap
-                val location = map?.locationComponent?.lastKnownLocation
+                val location = myLocation
                 if (map != null && location != null) {
-                    map.easeCamera(
-                        CameraUpdateFactory.newLatLngZoom(LatLng(location.latitude, location.longitude), 15.0),
-                        600,
-                    )
+                    map.easeCamera(CameraUpdateFactory.newLatLngZoom(location, 15.0), 600)
                 } else {
                     scope.launch { snackbarHostState.showSnackbar("Konumunuz bulunamadı.") }
                 }
@@ -310,7 +367,7 @@ fun MapScreen(
                 focusCameraOnVehicles(mapLibreMap, viewModel.uiState.value.filteredVehicles)
             },
             onFindNearestClick = {
-                val location = mapLibreMap?.locationComponent?.lastKnownLocation
+                val location = myLocation
                 if (location == null) {
                     scope.launch { snackbarHostState.showSnackbar("Konumunuz bulunamadı, konum iznini kontrol edin.") }
                 } else {
@@ -338,8 +395,7 @@ fun MapScreen(
 
         val vehicle = selectedVehicle
         if (vehicle != null) {
-            val userLocation = mapLibreMap?.locationComponent?.lastKnownLocation
-            val distanceLabel = userLocation?.let {
+            val distanceLabel = myLocation?.let {
                 formatDistanceMeters(haversineMeters(it.latitude, it.longitude, vehicle.latitude, vehicle.longitude))
             }
             VehicleDetailSheet(
@@ -377,14 +433,27 @@ private fun formatDistanceMeters(meters: Double): String = if (meters < 1000) {
     "%.1f km".format(meters / 1000)
 }
 
-private fun enableLocationComponent(context: android.content.Context, map: MapLibreMap, style: Style) {
-    runCatching {
-        map.locationComponent.activateLocationComponent(
-            LocationComponentActivationOptions.builder(context, style).build(),
-        )
-        map.locationComponent.isLocationComponentEnabled = true
-        map.locationComponent.cameraMode = CameraMode.NONE
+private fun updateMeMarker(style: Style, myLocation: LatLng?) {
+    val source = style.getSourceAs<GeoJsonSource>(ME_SOURCE_ID) ?: return
+    if (myLocation == null) {
+        source.setGeoJson(FeatureCollection.fromFeatures(emptyList()))
+    } else {
+        source.setGeoJson(Point.fromLngLat(myLocation.longitude, myLocation.latitude))
     }
+}
+
+@SuppressLint("MissingPermission")
+private fun startLocationUpdates(fusedClient: FusedLocationProviderClient, callback: LocationCallback) {
+    val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5_000L)
+        .setMinUpdateIntervalMillis(2_000L)
+        .build()
+
+    fusedClient.lastLocation.addOnSuccessListener { location ->
+        if (location != null) {
+            callback.onLocationResult(LocationResult.create(listOf(location)))
+        }
+    }
+    fusedClient.requestLocationUpdates(request, callback, Looper.getMainLooper())
 }
 
 @Composable

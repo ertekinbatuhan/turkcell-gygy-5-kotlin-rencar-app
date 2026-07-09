@@ -59,6 +59,7 @@ dependencies {
     implementation(libs.maplibre.annotation.plugin) {
         exclude(group = "org.maplibre.gl", module = "android-sdk")
     }
+    implementation(libs.play.services.location)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
