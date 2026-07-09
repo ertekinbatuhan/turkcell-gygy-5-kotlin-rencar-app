@@ -70,6 +70,7 @@ import com.flowbytestudio.rencar.data.vehicles.VehicleDto
 import com.flowbytestudio.rencar.ui.theme.Background
 import com.flowbytestudio.rencar.ui.theme.Danger
 import com.flowbytestudio.rencar.ui.theme.Primary
+import com.flowbytestudio.rencar.ui.theme.Surface
 import com.flowbytestudio.rencar.ui.theme.TextPrimary
 import com.flowbytestudio.rencar.ui.theme.TextSecondary
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -354,7 +355,7 @@ fun MapScreen(
                 .padding(bottom = 236.dp, end = 20.dp)
                 .size(46.dp)
                 .clip(CircleShape)
-                .background(Color.White),
+                .background(Surface),
         ) {
             Icon(Icons.Filled.MyLocation, contentDescription = "Konumuma git", tint = Primary)
         }
@@ -461,7 +462,7 @@ private fun SearchBar() {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        color = Color.White,
+        color = Surface,
         shadowElevation = 3.dp,
     ) {
         Row(
@@ -488,7 +489,7 @@ private fun ErrorBanner(message: String, onRetry: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        color = Color.White,
+        color = Surface,
         shadowElevation = 2.dp,
     ) {
         Row(
@@ -520,7 +521,7 @@ private fun BottomVehiclesCard(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-        color = Color.White,
+        color = Surface,
         shadowElevation = 8.dp,
     ) {
         Column(modifier = Modifier.padding(20.dp)) {

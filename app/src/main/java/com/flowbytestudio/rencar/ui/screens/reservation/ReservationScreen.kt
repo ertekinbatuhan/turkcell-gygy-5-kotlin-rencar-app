@@ -59,6 +59,7 @@ import com.flowbytestudio.rencar.ui.theme.Danger
 import com.flowbytestudio.rencar.ui.theme.Primary
 import com.flowbytestudio.rencar.ui.theme.Success
 import com.flowbytestudio.rencar.ui.theme.SuccessLight
+import com.flowbytestudio.rencar.ui.theme.Surface
 import com.flowbytestudio.rencar.ui.theme.TextPrimary
 import com.flowbytestudio.rencar.ui.theme.TextSecondary
 import kotlinx.coroutines.delay
@@ -130,93 +131,75 @@ fun ReservationScreen(
                 }
                 uiState.vehicle != null -> {
                     val vehicle = uiState.vehicle!!
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .verticalScroll(rememberScrollState())
-                            .padding(horizontal = 20.dp),
-                    ) {
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        VehicleSummaryCard(
-                            brand = vehicle.brand,
-                            model = vehicle.model,
-                            plate = vehicle.plate,
-                            typeLabel = VehicleType.labelFor(vehicle.type),
-                            typeColor = VehicleType.colorFor(vehicle.type),
-                        )
-
-                        Spacer(modifier = Modifier.height(20.dp))
-
-                        Text(
-                            text = "Kiralama süresi",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary,
-                        )
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        DaysStepper(
-                            days = uiState.days,
-                            onIncrement = viewModel::onDaysIncrement,
-                            onDecrement = viewModel::onDaysDecrement,
-                        )
-
-                        Spacer(modifier = Modifier.height(20.dp))
-
-                        PriceBreakdownCard(
-                            pricePerDay = vehicle.pricePerDay,
-                            days = uiState.days,
-                            totalPrice = uiState.totalPrice,
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Row(verticalAlignment = Alignment.Top) {
-                            Checkbox(
-                                checked = uiState.termsAccepted,
-                                onCheckedChange = viewModel::onTermsToggle,
-                                colors = CheckboxDefaults.colors(checkedColor = Primary),
-                            )
-                            Text(
-                                text = "Kullanım şartlarını ve kasko/sigorta koşullarını okudum, onaylıyorum.",
-                                fontSize = 13.sp,
-                                color = TextSecondary,
-                                modifier = Modifier
-                                    .padding(top = 14.dp)
-                                    .clickable { viewModel.onTermsToggle(!uiState.termsAccepted) },
-                            )
-                        }
-
-                        if (uiState.submitError != null) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(text = uiState.submitError.orEmpty(), color = Danger, fontSize = 13.sp)
-                        }
-
-                        Spacer(modifier = Modifier.height(20.dp))
-
-                        Button(
-                            onClick = { viewModel.submit(onCompleted = {}) },
-                            enabled = uiState.canSubmit,
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        Column(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .height(54.dp),
-                            shape = RoundedCornerShape(14.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                                .weight(1f)
+                                .verticalScroll(rememberScrollState())
+                                .padding(horizontal = 20.dp),
                         ) {
-                            if (uiState.isSubmitting) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(22.dp),
-                                    color = Color.White,
-                                    strokeWidth = 2.dp,
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            VehicleSummaryCard(
+                                brand = vehicle.brand,
+                                model = vehicle.model,
+                                plate = vehicle.plate,
+                                typeLabel = VehicleType.labelFor(vehicle.type),
+                                typeColor = VehicleType.colorFor(vehicle.type),
+                            )
+
+                            Spacer(modifier = Modifier.height(20.dp))
+
+                            Text(
+                                text = "Kiralama süresi",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextPrimary,
+                            )
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            DaysStepper(
+                                days = uiState.days,
+                                onIncrement = viewModel::onDaysIncrement,
+                                onDecrement = viewModel::onDaysDecrement,
+                            )
+
+                            Spacer(modifier = Modifier.height(20.dp))
+
+                            PriceBreakdownCard(
+                                pricePerDay = vehicle.pricePerDay,
+                                days = uiState.days,
+                                totalPrice = uiState.totalPrice,
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Row(verticalAlignment = Alignment.Top) {
+                                Checkbox(
+                                    checked = uiState.termsAccepted,
+                                    onCheckedChange = viewModel::onTermsToggle,
+                                    colors = CheckboxDefaults.colors(checkedColor = Primary),
                                 )
-                            } else {
-                                Text(text = "Rezervasyonu Tamamla", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                                Text(
+                                    text = "Kullanım şartlarını ve kasko/sigorta koşullarını okudum, onaylıyorum.",
+                                    fontSize = 13.sp,
+                                    color = TextSecondary,
+                                    modifier = Modifier
+                                        .padding(top = 14.dp)
+                                        .clickable { viewModel.onTermsToggle(!uiState.termsAccepted) },
+                                )
                             }
+
+                            Spacer(modifier = Modifier.height(20.dp))
                         }
 
-                        Spacer(modifier = Modifier.height(24.dp))
+                        ReservationBottomBar(
+                            isSubmitting = uiState.isSubmitting,
+                            enabled = uiState.canSubmit,
+                            errorMessage = uiState.submitError,
+                            onSubmit = { viewModel.submit(onCompleted = {}) },
+                        )
                     }
                 }
             }
@@ -226,6 +209,46 @@ fun ReservationScreen(
                 modifier = Modifier.align(Alignment.BottomCenter),
             ) { data ->
                 Snackbar(snackbarData = data)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReservationBottomBar(
+    isSubmitting: Boolean,
+    enabled: Boolean,
+    errorMessage: String?,
+    onSubmit: () -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = Surface,
+        shadowElevation = 12.dp,
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp)) {
+            if (errorMessage != null) {
+                Text(text = errorMessage, color = Danger, fontSize = 13.sp)
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+            Button(
+                onClick = onSubmit,
+                enabled = enabled,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Primary),
+            ) {
+                if (isSubmitting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(22.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp,
+                    )
+                } else {
+                    Text(text = "Rezervasyonu Tamamla", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                }
             }
         }
     }
@@ -242,7 +265,7 @@ private fun VehicleSummaryCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        color = Color.White,
+        color = Surface,
         shadowElevation = 2.dp,
     ) {
         Row(
@@ -288,7 +311,7 @@ private fun DaysStepper(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        color = Color.White,
+        color = Surface,
         shadowElevation = 2.dp,
     ) {
         Row(
@@ -337,7 +360,7 @@ private fun PriceBreakdownCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        color = Color.White,
+        color = Surface,
         shadowElevation = 2.dp,
     ) {
         Column(modifier = Modifier.padding(16.dp)) {

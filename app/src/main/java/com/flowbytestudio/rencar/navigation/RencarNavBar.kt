@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.flowbytestudio.rencar.ui.theme.Primary
+import com.flowbytestudio.rencar.ui.theme.Surface
 import com.flowbytestudio.rencar.ui.theme.TextSecondary
 
 @Composable
@@ -25,7 +26,7 @@ fun RencarNavBar(navController: NavController) {
 
     NavigationBar(
         modifier = Modifier.height(72.dp),
-        containerColor = Color.White,
+        containerColor = Surface,
         tonalElevation = 0.dp,
     ) {
         bottomNavItems.forEach { item ->

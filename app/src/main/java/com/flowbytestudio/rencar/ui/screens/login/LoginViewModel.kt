@@ -44,7 +44,7 @@ class LoginViewModel(
             return
         }
 
-        // Swagger: phone must be in +90 format
+        // Backend expects format: +905317452223
         val fullPhone = "+90$phoneDigits"
         Log.d("RencarAuth", "Login Request: phone=$fullPhone")
 
@@ -147,7 +147,8 @@ class LoginViewModel(
                 code = "", 
                 error = null,
                 timerSeconds = 0,
-                canResendOtp = false
+                canResendOtp = false,
+                isLoading = false
             ) 
         }
     }

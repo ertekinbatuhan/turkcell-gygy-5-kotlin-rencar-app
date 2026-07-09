@@ -1,5 +1,6 @@
 package com.flowbytestudio.rencar.ui.screens.login
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -42,17 +43,24 @@ fun LoginScreen(
         if (uiState.isLoggedIn) onLoggedIn()
     }
 
+    // Android sistem geri tuşu/hareketi yönetimi
+    BackHandler(enabled = uiState.step == LoginStep.OTP) {
+        viewModel.onChangePhone()
+    }
+
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = Color.White
+        color = Background
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .statusBarsPadding()
                 .padding(horizontal = 24.dp)
         ) {
             Spacer(modifier = Modifier.height(16.dp))
             AuthBackButton(
+                modifier = Modifier.padding(start = 8.dp, top = 4.dp),
                 onClick = {
                     if (uiState.step == LoginStep.OTP) {
                         viewModel.onChangePhone()
@@ -217,17 +225,20 @@ private fun OtpStepContent(
         AuthFooterText(
             mainText = "Numara yanlış mı? ",
             actionText = "Değiştir",
-            onClick = viewModel::onChangePhone
+            onClick = { viewModel.onChangePhone() }
         )
         Spacer(modifier = Modifier.height(32.dp))
     }
 }
 
 @Composable
-fun AuthBackButton(onClick: () -> Unit) {
+fun AuthBackButton(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
     IconButton(
         onClick = onClick,
-        modifier = Modifier
+        modifier = modifier
             .size(44.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(BgLight)
@@ -267,8 +278,8 @@ fun PhoneNumberInput(value: String, onValueChange: (String) -> Unit) {
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Primary,
                 unfocusedBorderColor = BorderColor,
-                focusedContainerColor = Color.White,
-                unfocusedContainerColor = Color.White
+                focusedContainerColor = Surface,
+                unfocusedContainerColor = Surface
             )
         )
     }
@@ -294,7 +305,7 @@ fun OtpInputFields(value: String, onValueChange: (String) -> Unit) {
                                 color = if (isFocused) Primary else BorderColor,
                                 shape = RoundedCornerShape(14.dp)
                             )
-                            .background(Color.White),
+                            .background(Surface),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
