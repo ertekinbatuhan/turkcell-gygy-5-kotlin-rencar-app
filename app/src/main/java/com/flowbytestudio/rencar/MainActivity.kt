@@ -17,11 +17,13 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.flowbytestudio.rencar.data.auth.AuthSession
+import com.flowbytestudio.rencar.data.settings.ThemeController
 import com.flowbytestudio.rencar.navigation.AppNavGraph
 import com.flowbytestudio.rencar.navigation.LoginRoute
 import com.flowbytestudio.rencar.navigation.OnboardingRoute
 import com.flowbytestudio.rencar.navigation.RencarNavBar
 import com.flowbytestudio.rencar.navigation.ReservationRoute
+import com.flowbytestudio.rencar.navigation.SettingsRoute
 import com.flowbytestudio.rencar.ui.screens.login.LoginScreen
 import com.flowbytestudio.rencar.ui.screens.onboarding.OnboardingScreen
 import com.flowbytestudio.rencar.ui.theme.RencarTheme
@@ -30,6 +32,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        ThemeController.init(applicationContext)
         setContent {
             RencarTheme {
                 RencarApp()
@@ -69,7 +72,8 @@ private fun RencarApp() {
 
     val navController = rememberNavController()
     val currentDestination = navController.currentBackStackEntryAsState().value?.destination
-    val showBottomBar = currentDestination?.hasRoute(ReservationRoute::class) != true
+    val showBottomBar = currentDestination?.hasRoute(ReservationRoute::class) != true &&
+        currentDestination?.hasRoute(SettingsRoute::class) != true
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),

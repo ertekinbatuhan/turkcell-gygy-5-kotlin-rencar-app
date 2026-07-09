@@ -15,7 +15,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -24,7 +23,9 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.flowbytestudio.rencar.ui.theme.BgLight
+import com.flowbytestudio.rencar.ui.theme.BorderLight
 import com.flowbytestudio.rencar.ui.theme.Primary
+import com.flowbytestudio.rencar.ui.theme.Surface
 import com.flowbytestudio.rencar.ui.theme.TextPrimary
 import com.flowbytestudio.rencar.ui.theme.TextSecondary
 
@@ -50,7 +51,7 @@ fun OnboardingScreen(
                 modifier = Modifier
                     .size(100.dp)
                     .clip(RoundedCornerShape(28.dp))
-                    .background(Color.White),
+                    .background(Surface),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -90,7 +91,7 @@ fun OnboardingScreen(
                         modifier = Modifier
                             .size(width = if (index == 0) 24.dp else 8.dp, height = 8.dp)
                             .clip(CircleShape)
-                            .background(if (index == 0) Primary else Color.LightGray.copy(alpha = 0.5f))
+                            .background(if (index == 0) Primary else BorderLight)
                     )
                 }
             }

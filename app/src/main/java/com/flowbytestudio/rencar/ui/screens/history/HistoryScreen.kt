@@ -45,6 +45,7 @@ import com.flowbytestudio.rencar.ui.theme.Primary
 import com.flowbytestudio.rencar.ui.theme.PrimaryLight
 import com.flowbytestudio.rencar.ui.theme.Success
 import com.flowbytestudio.rencar.ui.theme.SuccessLight
+import com.flowbytestudio.rencar.ui.theme.Surface
 import com.flowbytestudio.rencar.ui.theme.TextPrimary
 import com.flowbytestudio.rencar.ui.theme.TextSecondary
 
@@ -115,7 +116,7 @@ private fun RentalCard(rental: RentalUiModel) {
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp),
-            color = Color.White,
+            color = Surface,
             tonalElevation = 0.dp,
         ) {
             Row(
@@ -195,6 +196,7 @@ private fun InfoChip(text: String) {
     }
 }
 
+@Composable
 private fun statusVisual(status: RentalStatus): Color = when (status) {
     RentalStatus.ACTIVE -> Primary
     RentalStatus.COMPLETED -> Success

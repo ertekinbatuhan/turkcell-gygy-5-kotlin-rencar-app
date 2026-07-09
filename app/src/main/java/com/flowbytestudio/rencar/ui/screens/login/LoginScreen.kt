@@ -44,7 +44,7 @@ fun LoginScreen(
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = Color.White
+        color = Background
     ) {
         Column(
             modifier = Modifier
@@ -267,8 +267,8 @@ fun PhoneNumberInput(value: String, onValueChange: (String) -> Unit) {
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Primary,
                 unfocusedBorderColor = BorderColor,
-                focusedContainerColor = Color.White,
-                unfocusedContainerColor = Color.White
+                focusedContainerColor = Surface,
+                unfocusedContainerColor = Surface
             )
         )
     }
@@ -294,7 +294,7 @@ fun OtpInputFields(value: String, onValueChange: (String) -> Unit) {
                                 color = if (isFocused) Primary else BorderColor,
                                 shape = RoundedCornerShape(14.dp)
                             )
-                            .background(Color.White),
+                            .background(Surface),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(

@@ -10,6 +10,7 @@ import com.flowbytestudio.rencar.ui.screens.history.HistoryScreen
 import com.flowbytestudio.rencar.ui.screens.map.MapScreen
 import com.flowbytestudio.rencar.ui.screens.profile.ProfileScreen
 import com.flowbytestudio.rencar.ui.screens.reservation.ReservationScreen
+import com.flowbytestudio.rencar.ui.screens.settings.SettingsScreen
 import com.flowbytestudio.rencar.ui.screens.wallet.WalletScreen
 
 @Composable
@@ -31,7 +32,14 @@ fun AppNavGraph(
         }
         composable<HistoryRoute> { HistoryScreen() }
         composable<WalletRoute> { WalletScreen() }
-        composable<ProfileRoute> { ProfileScreen() }
+        composable<ProfileRoute> {
+            ProfileScreen(
+                onNavigateToSettings = { navController.navigate(SettingsRoute) },
+            )
+        }
+        composable<SettingsRoute> {
+            SettingsScreen(onBack = { navController.popBackStack() })
+        }
         composable<ReservationRoute> { backStackEntry ->
             val route = backStackEntry.toRoute<ReservationRoute>()
             ReservationScreen(

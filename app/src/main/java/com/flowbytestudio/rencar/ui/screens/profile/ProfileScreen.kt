@@ -49,18 +49,22 @@ import com.flowbytestudio.rencar.ui.theme.BorderLight
 import com.flowbytestudio.rencar.ui.theme.Danger
 import com.flowbytestudio.rencar.ui.theme.Success
 import com.flowbytestudio.rencar.ui.theme.SuccessLight
+import com.flowbytestudio.rencar.ui.theme.Surface
 import com.flowbytestudio.rencar.ui.theme.TextPrimary
 import com.flowbytestudio.rencar.ui.theme.TextSecondary
 
 @Composable
-fun ProfileScreen(viewModel: ProfileViewModel = viewModel()) {
+fun ProfileScreen(
+    onNavigateToSettings: () -> Unit = {},
+    viewModel: ProfileViewModel = viewModel(),
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     ProfileContent(
         uiState = uiState,
         onEditClick = {},
         onPaymentMethodsClick = {},
-        onSettingsClick = {},
+        onSettingsClick = onNavigateToSettings,
         onSupportClick = {},
         onReferralClick = {},
         onLogoutClick = viewModel::onLogoutClick,
@@ -181,7 +185,7 @@ private fun UserHeaderCard(
             modifier = Modifier
                 .size(38.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(Color.White)
+                .background(Surface)
                 .clickable(onClick = onEditClick),
             contentAlignment = Alignment.Center,
         ) {
@@ -200,7 +204,7 @@ private fun LicenseCard(licenseClass: String) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        color = Color.White,
+        color = Surface,
         tonalElevation = 0.dp,
     ) {
         Row(
@@ -260,7 +264,7 @@ private fun MenuCard(content: @Composable ColumnScope.() -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        color = Color.White,
+        color = Surface,
         tonalElevation = 0.dp,
     ) {
         Column(content = content)
@@ -318,7 +322,7 @@ private fun LogoutCard(onClick: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        color = Color.White,
+        color = Surface,
         tonalElevation = 0.dp,
     ) {
         Row(

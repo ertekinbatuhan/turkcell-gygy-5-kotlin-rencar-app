@@ -42,20 +42,17 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.flowbytestudio.rencar.ui.theme.Background
 import com.flowbytestudio.rencar.ui.theme.Danger
+import com.flowbytestudio.rencar.ui.theme.DangerLight
 import com.flowbytestudio.rencar.ui.theme.Primary
 import com.flowbytestudio.rencar.ui.theme.Success
 import com.flowbytestudio.rencar.ui.theme.SuccessLight
+import com.flowbytestudio.rencar.ui.theme.Surface
 import com.flowbytestudio.rencar.ui.theme.TextPrimary
 import com.flowbytestudio.rencar.ui.theme.TextSecondary
 
-private val CardBlue = Color(0xFF1A56DB)
-private val CardDarkBlue = Color(0xFF1E3A8A)
 private val VisaBlue = Color(0xFF1A1F71)
 private val MastercardRed = Color(0xFFEB001B)
 private val MastercardOrange = Color(0xFFF79E1B)
-private val DefaultBadgeBg = Color(0xFFEEF3FF)
-private val DefaultBadgeText = Color(0xFF3D7BF4)
-private val DangerLight = Color(0xFFFFEDED)
 
 @Composable
 fun WalletScreen(viewModel: WalletViewModel = viewModel()) {
@@ -268,7 +265,7 @@ private fun SavedCardsCard(content: @Composable ColumnScope.() -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        color = Color.White,
+        color = Surface,
         tonalElevation = 0.dp,
     ) {
         Column(content = content)
@@ -350,14 +347,14 @@ private fun SavedCardItem(
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
-                    .background(DefaultBadgeBg)
+                    .background(SuccessLight)
                     .padding(horizontal = 10.dp, vertical = 5.dp),
             ) {
                 Text(
                     text = "Varsayılan",
                     fontSize = 13.5.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = DefaultBadgeText,
+                    color = Success,
                 )
             }
         }
@@ -369,7 +366,7 @@ private fun TransactionsCard(content: @Composable ColumnScope.() -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        color = Color.White,
+        color = Surface,
         tonalElevation = 0.dp,
     ) {
         Column(content = content)

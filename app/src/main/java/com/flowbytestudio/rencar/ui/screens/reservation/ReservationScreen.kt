@@ -59,6 +59,7 @@ import com.flowbytestudio.rencar.ui.theme.Danger
 import com.flowbytestudio.rencar.ui.theme.Primary
 import com.flowbytestudio.rencar.ui.theme.Success
 import com.flowbytestudio.rencar.ui.theme.SuccessLight
+import com.flowbytestudio.rencar.ui.theme.Surface
 import com.flowbytestudio.rencar.ui.theme.TextPrimary
 import com.flowbytestudio.rencar.ui.theme.TextSecondary
 import kotlinx.coroutines.delay
@@ -242,7 +243,7 @@ private fun VehicleSummaryCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        color = Color.White,
+        color = Surface,
         shadowElevation = 2.dp,
     ) {
         Row(
@@ -288,7 +289,7 @@ private fun DaysStepper(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        color = Color.White,
+        color = Surface,
         shadowElevation = 2.dp,
     ) {
         Row(
@@ -337,7 +338,7 @@ private fun PriceBreakdownCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        color = Color.White,
+        color = Surface,
         shadowElevation = 2.dp,
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
