@@ -1,6 +1,5 @@
 package com.flowbytestudio.rencar.navigation
 
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -9,12 +8,14 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import com.flowbytestudio.rencar.ui.theme.Divider
 import com.flowbytestudio.rencar.ui.theme.Primary
 import com.flowbytestudio.rencar.ui.theme.Surface
 import com.flowbytestudio.rencar.ui.theme.TextSecondary
@@ -23,9 +24,18 @@ import com.flowbytestudio.rencar.ui.theme.TextSecondary
 fun RencarNavBar(navController: NavController) {
     val backStackEntry = navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry.value?.destination
+    val dividerColor = Divider
 
     NavigationBar(
-        modifier = Modifier.height(72.dp),
+        modifier = Modifier
+            .drawBehind {
+                drawLine(
+                    color = dividerColor,
+                    start = androidx.compose.ui.geometry.Offset(0f, 0f),
+                    end = androidx.compose.ui.geometry.Offset(size.width, 0f),
+                    strokeWidth = 1.dp.toPx(),
+                )
+            },
         containerColor = Surface,
         tonalElevation = 0.dp,
     ) {
@@ -47,13 +57,13 @@ fun RencarNavBar(navController: NavController) {
                     Icon(
                         imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
                         contentDescription = item.label,
-                        modifier = Modifier.size(24.dp),
+                        modifier = Modifier.size(25.dp),
                     )
                 },
                 label = {
                     Text(
                         text = item.label,
-                        fontSize = 12.5.sp,
+                        fontSize = 13.5.sp,
                         fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
                     )
                 },
