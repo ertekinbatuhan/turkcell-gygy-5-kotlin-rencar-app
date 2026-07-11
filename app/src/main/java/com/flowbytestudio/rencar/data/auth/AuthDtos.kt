@@ -29,4 +29,6 @@ data class UserResponse(
     val phone: String? = null,
     val fullName: String,
     val role: String,
+    // Backend UserResponseDto'da henüz yok; profil avatarı için önden eklendi.
+    val avatarUrl: String? = null,
 )

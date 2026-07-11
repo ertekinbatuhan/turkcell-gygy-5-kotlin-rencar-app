@@ -24,6 +24,7 @@ class ProfileViewModel(
                     it.copy(
                         name = user?.fullName.orEmpty(),
                         phone = user?.phone.orEmpty(),
+                        avatarUrl = user?.avatarUrl,
                     )
                 }
             }

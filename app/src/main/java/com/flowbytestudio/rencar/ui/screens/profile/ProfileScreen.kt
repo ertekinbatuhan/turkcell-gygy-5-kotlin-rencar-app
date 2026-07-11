@@ -42,8 +42,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.layout.ContentScale
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.flowbytestudio.rencar.ui.theme.Background
 import com.flowbytestudio.rencar.ui.theme.BorderLight
 import com.flowbytestudio.rencar.ui.theme.Danger
@@ -93,6 +95,7 @@ private fun ProfileContent(
         UserHeaderCard(
             name = uiState.name,
             phone = uiState.phone,
+            avatarUrl = uiState.avatarUrl,
             onEditClick = onEditClick,
         )
 
@@ -141,6 +144,7 @@ private fun ProfileContent(
 private fun UserHeaderCard(
     name: String,
     phone: String,
+    avatarUrl: String?,
     onEditClick: () -> Unit,
 ) {
     Row(
@@ -156,12 +160,21 @@ private fun UserHeaderCard(
                 .background(Color(0xFFE8E0F0)),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                imageVector = Icons.Outlined.Person,
-                contentDescription = null,
-                tint = Color(0xFF9C72CB),
-                modifier = Modifier.size(34.dp),
-            )
+            if (avatarUrl != null) {
+                AsyncImage(
+                    model = avatarUrl,
+                    contentDescription = name,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Outlined.Person,
+                    contentDescription = null,
+                    tint = Color(0xFF9C72CB),
+                    modifier = Modifier.size(34.dp),
+                )
+            }
         }
 
         Spacer(modifier = Modifier.width(14.dp))
