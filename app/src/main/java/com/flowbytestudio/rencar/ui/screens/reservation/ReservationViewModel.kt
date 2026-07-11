@@ -15,9 +15,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 
-private const val MIN_DAYS = 1
-private const val MAX_DAYS = 30
-
 class ReservationViewModel(
     private val vehicleId: String,
     private val vehicleRepository: VehicleRepository = VehicleRepository(),
@@ -36,7 +33,16 @@ class ReservationViewModel(
             _uiState.update { it.copy(isLoadingVehicle = true, loadError = null) }
             vehicleRepository.getVehicle(vehicleId)
                 .onSuccess { vehicle ->
-                    _uiState.update { it.copy(isLoadingVehicle = false, vehicle = vehicle) }
+                    // Fiyatı API'den gelen ilk plan seçili başlar; dakikalık/saatlik
+                    // fiyatlar backend'e eklenene kadar bu her zaman GUNLUK olur.
+                    val defaultPlan = when {
+                        vehicle.pricePerMinute != null -> RentalPlan.DAKIKALIK
+                        vehicle.pricePerHour != null -> RentalPlan.SAATLIK
+                        else -> RentalPlan.GUNLUK
+                    }
+                    _uiState.update {
+                        it.copy(isLoadingVehicle = false, vehicle = vehicle, selectedPlan = defaultPlan)
+                    }
                 }
                 .onFailure { throwable ->
                     _uiState.update {
@@ -46,12 +52,8 @@ class ReservationViewModel(
         }
     }
 
-    fun onDaysIncrement() {
-        _uiState.update { it.copy(days = (it.days + 1).coerceAtMost(MAX_DAYS)) }
-    }
-
-    fun onDaysDecrement() {
-        _uiState.update { it.copy(days = (it.days - 1).coerceAtLeast(MIN_DAYS)) }
+    fun onPlanSelect(plan: RentalPlan) {
+        _uiState.update { it.copy(selectedPlan = plan) }
     }
 
     fun onTermsToggle(accepted: Boolean) {
