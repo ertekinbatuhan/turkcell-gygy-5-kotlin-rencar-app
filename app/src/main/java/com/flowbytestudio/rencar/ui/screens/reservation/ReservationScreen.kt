@@ -1,6 +1,7 @@
 package com.flowbytestudio.rencar.ui.screens.reservation
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,14 +15,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.DirectionsCar
-import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
@@ -44,24 +42,33 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import coil.compose.AsyncImage
+import com.flowbytestudio.rencar.data.vehicles.VehicleDto
 import com.flowbytestudio.rencar.ui.screens.map.VehicleType
 import com.flowbytestudio.rencar.ui.theme.Background
+import com.flowbytestudio.rencar.ui.theme.BgLight
+import com.flowbytestudio.rencar.ui.theme.BorderLight
 import com.flowbytestudio.rencar.ui.theme.Danger
+import com.flowbytestudio.rencar.ui.theme.DangerLight
 import com.flowbytestudio.rencar.ui.theme.Primary
+import com.flowbytestudio.rencar.ui.theme.PrimaryLight
 import com.flowbytestudio.rencar.ui.theme.Success
 import com.flowbytestudio.rencar.ui.theme.SuccessLight
 import com.flowbytestudio.rencar.ui.theme.Surface
 import com.flowbytestudio.rencar.ui.theme.TextPrimary
 import com.flowbytestudio.rencar.ui.theme.TextSecondary
+import java.util.Locale
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -140,38 +147,29 @@ fun ReservationScreen(
                         ) {
                             Spacer(modifier = Modifier.height(8.dp))
 
-                            VehicleSummaryCard(
-                                brand = vehicle.brand,
-                                model = vehicle.model,
-                                plate = vehicle.plate,
-                                typeLabel = VehicleType.labelFor(vehicle.type),
-                                typeColor = VehicleType.colorFor(vehicle.type),
-                            )
+                            VehicleSummaryCard(vehicle = vehicle)
 
-                            Spacer(modifier = Modifier.height(20.dp))
+                            Spacer(modifier = Modifier.height(16.dp))
 
-                            Text(
-                                text = "Kiralama süresi",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = TextPrimary,
-                            )
-
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            DaysStepper(
-                                days = uiState.days,
-                                onIncrement = viewModel::onDaysIncrement,
-                                onDecrement = viewModel::onDaysDecrement,
-                            )
-
-                            Spacer(modifier = Modifier.height(20.dp))
-
-                            PriceBreakdownCard(
+                            PlanSelector(
+                                selected = uiState.selectedPlan,
+                                pricePerMinute = vehicle.pricePerMinute,
+                                pricePerHour = vehicle.pricePerHour,
                                 pricePerDay = vehicle.pricePerDay,
-                                days = uiState.days,
-                                totalPrice = uiState.totalPrice,
+                                onSelect = viewModel::onPlanSelect,
                             )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            when (uiState.selectedPlan) {
+                                RentalPlan.DAKIKALIK -> MinutePlanCard(estimate = uiState.minuteEstimate)
+                                RentalPlan.SAATLIK -> HourPlanCard(pricePerHour = vehicle.pricePerHour)
+                                RentalPlan.GUNLUK -> PriceBreakdownCard(
+                                    pricePerDay = vehicle.pricePerDay,
+                                    days = uiState.days,
+                                    totalPrice = uiState.totalPrice,
+                                )
+                            }
 
                             Spacer(modifier = Modifier.height(16.dp))
 
@@ -255,13 +253,20 @@ private fun ReservationBottomBar(
 }
 
 @Composable
-private fun VehicleSummaryCard(
-    brand: String,
-    model: String,
-    plate: String,
-    typeLabel: String,
-    typeColor: Color,
-) {
+private fun VehicleSummaryCard(vehicle: VehicleDto) {
+    val typeColor = VehicleType.colorFor(vehicle.type)
+    val (statusLabel, statusColor, statusBg) = when (vehicle.status.uppercase()) {
+        "AVAILABLE" -> Triple("Müsait", Success, SuccessLight)
+        "RENTED" -> Triple("Kirada", Danger, DangerLight)
+        "MAINTENANCE" -> Triple("Bakımda", TextSecondary, BgLight)
+        else -> Triple(vehicle.status, TextSecondary, BgLight)
+    }
+    val subtitle = listOfNotNull(
+        vehicle.plate,
+        vehicle.transmission ?: VehicleType.labelFor(vehicle.type),
+        vehicle.seatCount?.let { "$it kişi" },
+    ).joinToString(" · ")
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -274,39 +279,67 @@ private fun VehicleSummaryCard(
         ) {
             Box(
                 modifier = Modifier
-                    .size(64.dp)
+                    .width(76.dp)
+                    .height(56.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(Brush.linearGradient(colors = listOf(typeColor, typeColor.copy(alpha = 0.7f)))),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Outlined.DirectionsCar, contentDescription = null, tint = Color.White, modifier = Modifier.size(30.dp))
+                if (vehicle.imageUrl != null) {
+                    AsyncImage(
+                        model = vehicle.imageUrl,
+                        contentDescription = "${vehicle.brand} ${vehicle.model}",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                } else {
+                    Icon(Icons.Outlined.DirectionsCar, contentDescription = null, tint = Color.White, modifier = Modifier.size(30.dp))
+                }
             }
 
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = "$brand $model", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                Text(text = "${vehicle.brand} ${vehicle.model}", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
                 Spacer(modifier = Modifier.height(2.dp))
-                Text(text = "$plate · $typeLabel", fontSize = 13.sp, color = TextSecondary)
+                Text(text = subtitle, fontSize = 13.sp, color = TextSecondary)
+                if (vehicle.fuelPercent != null) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(SuccessLight)
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
+                    ) {
+                        Text(
+                            text = "Yakıt %${vehicle.fuelPercent}",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Success,
+                        )
+                    }
+                }
             }
 
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
-                    .background(SuccessLight)
+                    .background(statusBg)
                     .padding(horizontal = 10.dp, vertical = 5.dp),
             ) {
-                Text(text = "Müsait", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Success)
+                Text(text = statusLabel, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = statusColor)
             }
         }
     }
 }
 
 @Composable
-private fun DaysStepper(
-    days: Int,
-    onIncrement: () -> Unit,
-    onDecrement: () -> Unit,
+private fun PlanSelector(
+    selected: RentalPlan,
+    pricePerMinute: Double?,
+    pricePerHour: Double?,
+    pricePerDay: Double,
+    onSelect: (RentalPlan) -> Unit,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -314,40 +347,128 @@ private fun DaysStepper(
         color = Surface,
         shadowElevation = 2.dp,
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            StepperButton(icon = Icons.Outlined.Remove, contentDescription = "Azalt", onClick = onDecrement)
+        Column(modifier = Modifier.padding(14.dp)) {
             Text(
-                text = if (days == 1) "1 gün" else "$days gün",
-                fontSize = 17.sp,
-                fontWeight = FontWeight.Bold,
+                text = "Kiralama planı",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
                 color = TextPrimary,
             )
-            StepperButton(icon = Icons.Outlined.Add, contentDescription = "Artır", onClick = onIncrement)
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                PlanChip(
+                    title = "Dakikalık",
+                    priceLabel = pricePerMinute?.let { "₺${formatTl(it)}/dk" },
+                    selected = selected == RentalPlan.DAKIKALIK,
+                    onClick = { onSelect(RentalPlan.DAKIKALIK) },
+                    modifier = Modifier.weight(1f),
+                )
+                PlanChip(
+                    title = "Saatlik",
+                    priceLabel = pricePerHour?.let { "₺${formatTl(it)}/sa" },
+                    selected = selected == RentalPlan.SAATLIK,
+                    onClick = { onSelect(RentalPlan.SAATLIK) },
+                    modifier = Modifier.weight(1f),
+                )
+                PlanChip(
+                    title = "Günlük",
+                    priceLabel = "₺${formatTl(pricePerDay)}",
+                    selected = selected == RentalPlan.GUNLUK,
+                    onClick = { onSelect(RentalPlan.GUNLUK) },
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun StepperButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    contentDescription: String,
+private fun PlanChip(
+    title: String,
+    priceLabel: String?,
+    selected: Boolean,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Box(
-        modifier = Modifier
-            .size(36.dp)
-            .clip(CircleShape)
-            .background(Background)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
+    // Fiyatı API'den gelmeyen planlar veri gelene kadar seçilemez.
+    val enabled = priceLabel != null
+    val shape = RoundedCornerShape(12.dp)
+
+    Column(
+        modifier = modifier
+            .clip(shape)
+            .border(
+                width = if (selected) 1.5.dp else 1.dp,
+                color = if (selected) Primary else BorderLight,
+                shape = shape,
+            )
+            .background(if (selected) PrimaryLight else Surface)
+            .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier.alpha(0.45f))
+            .padding(vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Icon(icon, contentDescription = contentDescription, tint = Primary, modifier = Modifier.size(18.dp))
+        Text(
+            text = title,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = if (selected) Primary else TextPrimary,
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = priceLabel ?: "—",
+            fontSize = 12.sp,
+            color = if (selected) Primary else TextSecondary,
+        )
+    }
+}
+
+@Composable
+private fun MinutePlanCard(estimate: Double?) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = Surface,
+        shadowElevation = 2.dp,
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            PriceRow(label = "Ücretsiz rezervasyon", value = "$FREE_RESERVATION_MINUTES dk")
+            Spacer(modifier = Modifier.height(8.dp))
+            PriceRow(label = "Başlangıç ücreti", value = "₺${formatTl(MINUTE_PLAN_START_FEE)}")
+            Spacer(modifier = Modifier.height(10.dp))
+            HorizontalDivider(color = Background, thickness = 1.dp)
+            Spacer(modifier = Modifier.height(10.dp))
+            PriceRow(
+                label = "Tahmini ücret ($MINUTE_ESTIMATE_MINUTES dk)",
+                value = estimate?.let { "~₺${formatTl(it)}" } ?: "—",
+                emphasize = true,
+            )
+        }
+    }
+}
+
+@Composable
+private fun HourPlanCard(pricePerHour: Double?) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = Surface,
+        shadowElevation = 2.dp,
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            PriceRow(label = "Ücretsiz rezervasyon", value = "$FREE_RESERVATION_MINUTES dk")
+            Spacer(modifier = Modifier.height(8.dp))
+            PriceRow(label = "Saatlik ücret", value = pricePerHour?.let { "₺${formatTl(it)}" } ?: "—")
+            Spacer(modifier = Modifier.height(10.dp))
+            HorizontalDivider(color = Background, thickness = 1.dp)
+            Spacer(modifier = Modifier.height(10.dp))
+            PriceRow(
+                label = "Tahmini ücret (1 sa)",
+                value = pricePerHour?.let { "~₺${formatTl(it)}" } ?: "—",
+                emphasize = true,
+            )
+        }
     }
 }
 
@@ -376,6 +497,16 @@ private fun PriceBreakdownCard(
                 emphasize = true,
             )
         }
+    }
+}
+
+/** ₺1.450 gibi tam sayıları binlik ayraçlı, ₺4,50 gibi değerleri virgüllü iki basamakla yazar. */
+private fun formatTl(value: Double): String {
+    val turkish = Locale("tr", "TR")
+    return if (value % 1.0 == 0.0) {
+        String.format(turkish, "%,d", value.toLong())
+    } else {
+        String.format(turkish, "%,.2f", value)
     }
 }
 

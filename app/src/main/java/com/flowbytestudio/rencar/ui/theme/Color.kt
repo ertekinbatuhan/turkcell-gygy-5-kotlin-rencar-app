@@ -32,7 +32,8 @@ val LightRencarColors = RencarColorScheme(
     successLight = Color(0xFFDCFCE7),
     danger = Color(0xFFEF4444),
     dangerLight = Color(0xFFFFEDED),
-    background = Color(0xFFFFFFFF),
+    // Sayfa zemini kartlardan ayrışsın diye gri; kartlar surface (beyaz) kullanır.
+    background = Color(0xFFF1F4F8),
     surface = Color(0xFFFFFFFF),
     textPrimary = Color(0xFF111827),
     textSecondary = Color(0xFF6B7280),

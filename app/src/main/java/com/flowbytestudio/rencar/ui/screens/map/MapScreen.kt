@@ -70,6 +70,7 @@ import com.flowbytestudio.rencar.data.vehicles.VehicleDto
 import com.flowbytestudio.rencar.ui.theme.Background
 import com.flowbytestudio.rencar.ui.theme.Danger
 import com.flowbytestudio.rencar.ui.theme.Primary
+import com.flowbytestudio.rencar.ui.theme.Success
 import com.flowbytestudio.rencar.ui.theme.Surface
 import com.flowbytestudio.rencar.ui.theme.TextPrimary
 import com.flowbytestudio.rencar.ui.theme.TextSecondary
@@ -133,6 +134,8 @@ private const val OSM_RASTER_STYLE = """
 @Composable
 fun MapScreen(
     onNavigateToReservation: (String) -> Unit = {},
+    onNavigateToHandover: (String) -> Unit = {},
+    onNavigateToActiveRental: (String) -> Unit = {},
     viewModel: MapViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -166,8 +169,10 @@ fun MapScreen(
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             while (true) {
-                delay(VEHICLE_REFRESH_INTERVAL_MS)
+                // Ekrana her dönüşte (ör. kiralama bitirilip geri gelindiğinde) araçlar ve
+                // aktif kiralama banner'ı hemen tazelensin diye yükleme başta yapılır.
                 viewModel.loadVehicles()
+                delay(VEHICLE_REFRESH_INTERVAL_MS)
             }
         }
     }
@@ -334,6 +339,14 @@ fun MapScreen(
         ) {
             SearchBar()
 
+            uiState.activeRental?.let { active ->
+                Spacer(modifier = Modifier.height(12.dp))
+                ActiveRentalBanner(
+                    vehicleName = active.vehicle?.let { "${it.brand} ${it.model}" },
+                    onClick = { onNavigateToActiveRental(active.rental.id) },
+                )
+            }
+
             if (uiState.error != null) {
                 Spacer(modifier = Modifier.height(12.dp))
                 ErrorBanner(message = uiState.error.orEmpty(), onRetry = viewModel::loadVehicles)
@@ -410,7 +423,7 @@ fun MapScreen(
                 },
                 onUnlock = {
                     selectedVehicle = null
-                    scope.launch { snackbarHostState.showSnackbar("Kilit açma yakında eklenecek.") }
+                    onNavigateToHandover(vehicle.id)
                 },
             )
         }
@@ -481,6 +494,43 @@ private fun SearchBar() {
             )
             Icon(Icons.Outlined.FilterList, contentDescription = "Filtrele", tint = TextSecondary, modifier = Modifier.size(20.dp))
         }
+    }
+}
+
+@Composable
+private fun ActiveRentalBanner(
+    vehicleName: String?,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(TextPrimary)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(Success),
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = if (vehicleName != null) "Kiralama aktif · $vehicleName" else "Kiralama aktif",
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Background,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            text = "Devam et",
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            color = Success,
+        )
     }
 }
 

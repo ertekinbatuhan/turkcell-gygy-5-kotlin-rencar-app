@@ -1,5 +1,6 @@
 package com.flowbytestudio.rencar.ui.screens.map
 
+import com.flowbytestudio.rencar.data.rentals.RentalWithVehicle
 import com.flowbytestudio.rencar.data.vehicles.VehicleDto
 
 data class MapUiState(
@@ -8,6 +9,7 @@ data class MapUiState(
     val error: String? = null,
     val selectedType: String? = null,
     val focusedVehicleId: String? = null,
+    val activeRental: RentalWithVehicle? = null,
 ) {
     val filteredVehicles: List<VehicleDto>
         get() = vehicles.filter { selectedType == null || it.type == selectedType }
