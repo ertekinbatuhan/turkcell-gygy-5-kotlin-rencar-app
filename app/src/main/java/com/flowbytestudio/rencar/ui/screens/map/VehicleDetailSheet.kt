@@ -53,6 +53,9 @@ import com.flowbytestudio.rencar.ui.theme.TextPrimary
 import com.flowbytestudio.rencar.ui.theme.TextSecondary
 import java.util.Locale
 
+private const val MINUTES_PER_DAY = 1440.0
+private const val HOURS_PER_DAY = 24.0
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VehicleDetailSheet(
@@ -172,47 +175,34 @@ fun VehicleDetailSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // TODO: API şu an sadece pricePerDay döndürüyor; dakikalık/saatlik ücret
+            // burada client-side türetiliyor. Backend gerçek pricePerMinute/pricePerHour
+            // dönmeye başlarsa bu türetme kaldırılıp gerçek alanlar kullanılmalı.
+            val derivedPricePerMinute = vehicle.pricePerDay / MINUTES_PER_DAY
+            val derivedPricePerHour = vehicle.pricePerDay / HOURS_PER_DAY
+
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (vehicle.pricePerMinute != null) {
-                    Row(verticalAlignment = Alignment.Bottom) {
-                        Text(
-                            text = "₺${formatTl(vehicle.pricePerMinute)}",
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary,
-                        )
-                        Text(
-                            text = " /dk",
-                            fontSize = 14.sp,
-                            color = TextSecondary,
-                            modifier = Modifier.padding(bottom = 3.dp),
-                        )
-                    }
-                } else {
-                    Row(verticalAlignment = Alignment.Bottom) {
-                        Text(
-                            text = "₺${formatTl(vehicle.pricePerDay)}",
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary,
-                        )
-                        Text(
-                            text = " /gün",
-                            fontSize = 14.sp,
-                            color = TextSecondary,
-                            modifier = Modifier.padding(bottom = 3.dp),
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.weight(1f))
-                vehicle.pricePerHour?.let { hourly ->
+                Row(verticalAlignment = Alignment.Bottom) {
                     Text(
-                        text = "Saatlik ₺${formatTl(hourly)}",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        text = "₺${formatTl(derivedPricePerMinute)}",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
+                    )
+                    Text(
+                        text = " /dk",
+                        fontSize = 14.sp,
                         color = TextSecondary,
+                        modifier = Modifier.padding(bottom = 3.dp),
                     )
                 }
+                Spacer(modifier = Modifier.weight(1f))
+                Text(
+                    text = "Saatlik ₺${formatTl(derivedPricePerHour)}",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextSecondary,
+                )
             }
 
             Spacer(modifier = Modifier.height(20.dp))
