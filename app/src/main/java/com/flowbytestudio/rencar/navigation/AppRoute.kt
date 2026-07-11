@@ -25,3 +25,12 @@ data object SettingsRoute
 
 @Serializable
 data class ReservationRoute(val vehicleId: String)
+
+@Serializable
+data class HandoverRoute(val vehicleId: String)
+
+@Serializable
+data class ActiveRentalRoute(val rentalId: String)
+
+@Serializable
+data class TripSummaryRoute(val rentalId: String)

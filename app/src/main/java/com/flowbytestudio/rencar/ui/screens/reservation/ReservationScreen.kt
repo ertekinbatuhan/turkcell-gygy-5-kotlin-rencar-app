@@ -57,8 +57,10 @@ import coil.compose.AsyncImage
 import com.flowbytestudio.rencar.data.vehicles.VehicleDto
 import com.flowbytestudio.rencar.ui.screens.map.VehicleType
 import com.flowbytestudio.rencar.ui.theme.Background
+import com.flowbytestudio.rencar.ui.theme.BgLight
 import com.flowbytestudio.rencar.ui.theme.BorderLight
 import com.flowbytestudio.rencar.ui.theme.Danger
+import com.flowbytestudio.rencar.ui.theme.DangerLight
 import com.flowbytestudio.rencar.ui.theme.Primary
 import com.flowbytestudio.rencar.ui.theme.PrimaryLight
 import com.flowbytestudio.rencar.ui.theme.Success
@@ -253,6 +255,12 @@ private fun ReservationBottomBar(
 @Composable
 private fun VehicleSummaryCard(vehicle: VehicleDto) {
     val typeColor = VehicleType.colorFor(vehicle.type)
+    val (statusLabel, statusColor, statusBg) = when (vehicle.status.uppercase()) {
+        "AVAILABLE" -> Triple("Müsait", Success, SuccessLight)
+        "RENTED" -> Triple("Kirada", Danger, DangerLight)
+        "MAINTENANCE" -> Triple("Bakımda", TextSecondary, BgLight)
+        else -> Triple(vehicle.status, TextSecondary, BgLight)
+    }
     val subtitle = listOfNotNull(
         vehicle.plate,
         vehicle.transmission ?: VehicleType.labelFor(vehicle.type),
@@ -313,15 +321,13 @@ private fun VehicleSummaryCard(vehicle: VehicleDto) {
                 }
             }
 
-            if (vehicle.fuelPercent == null) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(SuccessLight)
-                        .padding(horizontal = 10.dp, vertical = 5.dp),
-                ) {
-                    Text(text = "Müsait", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Success)
-                }
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(statusBg)
+                    .padding(horizontal = 10.dp, vertical = 5.dp),
+            ) {
+                Text(text = statusLabel, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = statusColor)
             }
         }
     }

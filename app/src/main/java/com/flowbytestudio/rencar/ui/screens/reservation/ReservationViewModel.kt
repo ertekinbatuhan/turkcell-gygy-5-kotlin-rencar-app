@@ -77,11 +77,26 @@ class ReservationViewModel(
                     onCompleted()
                 }
                 .onFailure { throwable ->
-                    _uiState.update {
-                        it.copy(isSubmitting = false, submitError = throwable.toSubmitErrorMessage())
-                    }
+                    val message = resolveSubmitError(throwable)
+                    _uiState.update { it.copy(isSubmitting = false, submitError = message) }
                 }
         }
+    }
+
+    // 409 iki farklı durumda dönüyor: araç dolu ya da kullanıcının zaten aktif kiralaması
+    // var. Kiralamaları kontrol edip kullanıcıya doğru mesajı gösteriyoruz.
+    private suspend fun resolveSubmitError(throwable: Throwable): String {
+        if (throwable is HttpException && throwable.code() == 409) {
+            val hasActiveRental = rentalRepository.getMyRentals()
+                .getOrDefault(emptyList())
+                .any { it.rental.status == "ACTIVE" }
+            return if (hasActiveRental) {
+                "Zaten aktif bir kiralaman var. Yeni rezervasyon için önce mevcut kiralamayı bitirmelisin."
+            } else {
+                "Bu araç artık müsait değil."
+            }
+        }
+        return throwable.toSubmitErrorMessage()
     }
 }
 

@@ -2,6 +2,7 @@ package com.flowbytestudio.rencar.ui.screens.map
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.flowbytestudio.rencar.data.rentals.RentalRepository
 import com.flowbytestudio.rencar.data.vehicles.VehicleDto
 import com.flowbytestudio.rencar.data.vehicles.VehicleRepository
 import kotlin.math.atan2
@@ -17,6 +18,7 @@ import retrofit2.HttpException
 
 class MapViewModel(
     private val repository: VehicleRepository = VehicleRepository(),
+    private val rentalRepository: RentalRepository = RentalRepository(),
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MapUiState())
@@ -38,6 +40,19 @@ class MapViewModel(
                         it.copy(isLoading = false, error = throwable.toVehicleLoadErrorMessage())
                     }
                 }
+        }
+        loadActiveRental()
+    }
+
+    // Kullanıcının bitmemiş kiralaması varsa haritada "devam et" banner'ı gösterilir;
+    // bu sayede uygulama kapansa bile aktif kiralamaya geri dönülebilir.
+    private fun loadActiveRental() {
+        viewModelScope.launch {
+            rentalRepository.getMyRentals().onSuccess { rentals ->
+                _uiState.update { state ->
+                    state.copy(activeRental = rentals.firstOrNull { it.rental.status == "ACTIVE" })
+                }
+            }
         }
     }
 
