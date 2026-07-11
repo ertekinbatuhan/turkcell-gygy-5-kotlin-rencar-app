@@ -33,6 +33,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,9 +59,14 @@ import com.flowbytestudio.rencar.ui.theme.TextSecondary
 @Composable
 fun ProfileScreen(
     onNavigateToSettings: () -> Unit = {},
+    onNavigateToLicenseUpload: () -> Unit = {},
     viewModel: ProfileViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) {
+        viewModel.refreshLicenseStatus()
+    }
 
     ProfileContent(
         uiState = uiState,
@@ -69,6 +75,7 @@ fun ProfileScreen(
         onSettingsClick = onNavigateToSettings,
         onSupportClick = {},
         onReferralClick = {},
+        onLicenseClick = onNavigateToLicenseUpload,
         onLogoutClick = viewModel::onLogoutClick,
     )
 }
@@ -81,6 +88,7 @@ private fun ProfileContent(
     onSettingsClick: () -> Unit,
     onSupportClick: () -> Unit,
     onReferralClick: () -> Unit,
+    onLicenseClick: () -> Unit,
     onLogoutClick: () -> Unit,
 ) {
     Column(
@@ -103,6 +111,9 @@ private fun ProfileContent(
 
         if (uiState.isLicenseVerified) {
             LicenseCard(licenseClass = uiState.licenseClass)
+            Spacer(modifier = Modifier.height(12.dp))
+        } else {
+            LicensePendingCard(status = uiState.licenseStatus, onClick = onLicenseClick)
             Spacer(modifier = Modifier.height(12.dp))
         }
 
@@ -266,6 +277,84 @@ private fun LicenseCard(licenseClass: String) {
                     fontSize = 14.5.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Success,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LicensePendingCard(status: String, onClick: () -> Unit) {
+    val isUnderReview = status == "UNDER_REVIEW"
+    val (title, subtitle) = when (status) {
+        "UNDER_REVIEW" -> "Ehliyet inceleniyor" to "Başvurun onaylanınca burada görünecek"
+        "REJECTED" -> "Ehliyet reddedildi" to "Tekrar yüklemek için dokun"
+        else -> "Ehliyetini doğrula" to "Kiralama yapmadan önce tek seferlik gerekli"
+    }
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .let { if (isUnderReview) it else it.clickable(onClick = onClick) },
+        shape = RoundedCornerShape(20.dp),
+        color = Surface,
+        tonalElevation = 0.dp,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Background),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Shield,
+                    contentDescription = null,
+                    tint = TextSecondary,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    fontSize = 16.5.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary,
+                )
+                Text(
+                    text = subtitle,
+                    fontSize = 13.5.sp,
+                    color = TextSecondary,
+                )
+            }
+
+            if (isUnderReview) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Background)
+                        .padding(horizontal = 10.dp, vertical = 5.dp),
+                ) {
+                    Text(
+                        text = "İnceleniyor",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextSecondary,
+                    )
+                }
+            } else {
+                Icon(
+                    imageVector = Icons.Outlined.ChevronRight,
+                    contentDescription = null,
+                    tint = BorderLight,
+                    modifier = Modifier.size(20.dp),
                 )
             }
         }

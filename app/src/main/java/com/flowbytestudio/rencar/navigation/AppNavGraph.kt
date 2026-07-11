@@ -1,12 +1,17 @@
 package com.flowbytestudio.rencar.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import com.flowbytestudio.rencar.data.auth.AuthSession
 import com.flowbytestudio.rencar.ui.screens.history.HistoryScreen
+import com.flowbytestudio.rencar.ui.screens.license.LicenseUploadScreen
 import com.flowbytestudio.rencar.ui.screens.map.MapScreen
 import com.flowbytestudio.rencar.ui.screens.profile.ProfileScreen
 import com.flowbytestudio.rencar.ui.screens.reservation.ReservationScreen
@@ -18,9 +23,12 @@ fun AppNavGraph(
     navController: NavHostController,
     modifier: Modifier = Modifier,
 ) {
+    val startDestination = remember { if (AuthSession.justRegistered) LicenseUploadRoute else MapRoute }
+    LaunchedEffect(Unit) { AuthSession.consumeJustRegistered() }
+
     NavHost(
         navController = navController,
-        startDestination = MapRoute,
+        startDestination = startDestination,
         modifier = modifier,
     ) {
         composable<MapRoute> {
@@ -35,6 +43,7 @@ fun AppNavGraph(
         composable<ProfileRoute> {
             ProfileScreen(
                 onNavigateToSettings = { navController.navigate(SettingsRoute) },
+                onNavigateToLicenseUpload = { navController.navigate(LicenseUploadRoute) },
             )
         }
         composable<SettingsRoute> {
@@ -45,6 +54,19 @@ fun AppNavGraph(
             ReservationScreen(
                 vehicleId = route.vehicleId,
                 onBack = { navController.popBackStack() },
+            )
+        }
+        composable<LicenseUploadRoute> { backStackEntry ->
+            val isStartDestination = backStackEntry.destination.route ==
+                navController.graph.findStartDestination().route
+            LicenseUploadScreen(
+                canGoBack = !isStartDestination,
+                onFinished = {
+                    if (!navController.popBackStack()) navController.navigate(MapRoute)
+                },
+                onSkip = {
+                    if (!navController.popBackStack()) navController.navigate(MapRoute)
+                },
             )
         }
     }

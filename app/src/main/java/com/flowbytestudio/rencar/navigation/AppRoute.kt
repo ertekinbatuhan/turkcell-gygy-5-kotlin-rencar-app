@@ -9,6 +9,12 @@ data object OnboardingRoute
 data object LoginRoute
 
 @Serializable
+data object RegisterRoute
+
+@Serializable
+data object LicenseUploadRoute
+
+@Serializable
 data object MapRoute
 
 @Serializable

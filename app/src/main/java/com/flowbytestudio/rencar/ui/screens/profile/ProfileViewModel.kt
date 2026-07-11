@@ -32,10 +32,19 @@ class ProfileViewModel(
         loadLicenseStatus()
     }
 
+    fun refreshLicenseStatus() {
+        loadLicenseStatus()
+    }
+
     private fun loadLicenseStatus() {
         viewModelScope.launch {
             licenseRepository.getStatus().onSuccess { status ->
-                _uiState.update { it.copy(isLicenseVerified = status.status == "APPROVED") }
+                _uiState.update {
+                    it.copy(
+                        isLicenseVerified = status.status == "APPROVED",
+                        licenseStatus = status.status,
+                    )
+                }
             }
         }
     }

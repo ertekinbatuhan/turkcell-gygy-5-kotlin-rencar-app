@@ -3,6 +3,14 @@ package com.flowbytestudio.rencar.data.auth
 import kotlinx.serialization.Serializable
 
 @Serializable
+data class RegisterRequest(
+    val email: String,
+    val password: String,
+    val fullName: String,
+    val phone: String,
+)
+
+@Serializable
 data class LoginRequest(val phone: String)
 
 @Serializable

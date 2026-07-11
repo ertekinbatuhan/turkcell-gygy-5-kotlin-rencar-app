@@ -18,11 +18,19 @@ object AuthSession {
         get() = _isLoggedIn.asStateFlow()
     private val _isLoggedIn = MutableStateFlow(false)
 
-    fun onAuthenticated(response: AuthResponse) {
+    var justRegistered: Boolean = false
+        private set
+
+    fun onAuthenticated(response: AuthResponse, isNewRegistration: Boolean = false) {
         accessToken = response.accessToken
         refreshToken = response.refreshToken
         _currentUser.value = response.user
         _isLoggedIn.value = true
+        justRegistered = isNewRegistration
+    }
+
+    fun consumeJustRegistered() {
+        justRegistered = false
     }
 
     fun clear() {
@@ -30,5 +38,6 @@ object AuthSession {
         refreshToken = null
         _currentUser.value = null
         _isLoggedIn.value = false
+        justRegistered = false
     }
 }

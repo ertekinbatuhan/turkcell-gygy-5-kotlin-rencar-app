@@ -34,6 +34,7 @@ import com.flowbytestudio.rencar.ui.theme.*
 @Composable
 fun LoginScreen(
     onLoggedIn: () -> Unit,
+    onNavigateToRegister: () -> Unit,
     viewModel: LoginViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -67,7 +68,7 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             if (uiState.step == LoginStep.PHONE) {
-                PhoneStepContent(uiState, viewModel)
+                PhoneStepContent(uiState, viewModel, onNavigateToRegister)
             } else {
                 OtpStepContent(uiState, viewModel)
             }
@@ -78,7 +79,8 @@ fun LoginScreen(
 @Composable
 private fun PhoneStepContent(
     uiState: LoginUiState,
-    viewModel: LoginViewModel
+    viewModel: LoginViewModel,
+    onNavigateToRegister: () -> Unit
 ) {
     Column {
         Text(
@@ -126,7 +128,7 @@ private fun PhoneStepContent(
         AuthFooterText(
             mainText = "Hesabın yok mu? ",
             actionText = "Kayıt ol",
-            onClick = { /* Kayıt ol akışı */ }
+            onClick = onNavigateToRegister
         )
         Spacer(modifier = Modifier.height(32.dp))
     }

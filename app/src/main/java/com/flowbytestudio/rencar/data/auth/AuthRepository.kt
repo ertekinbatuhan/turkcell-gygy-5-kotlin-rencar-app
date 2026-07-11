@@ -6,6 +6,17 @@ class AuthRepository(
     private val api: AuthApi = NetworkModule.authApi,
 ) {
 
+    suspend fun register(
+        email: String,
+        password: String,
+        fullName: String,
+        phone: String,
+    ): Result<AuthResponse> = runCatching {
+        api.register(RegisterRequest(email = email, password = password, fullName = fullName, phone = phone))
+    }.onSuccess { response ->
+        AuthSession.onAuthenticated(response, isNewRegistration = true)
+    }
+
     suspend fun requestOtp(phone: String): Result<OtpRequiredResponse> = runCatching {
         api.login(LoginRequest(phone = phone))
     }

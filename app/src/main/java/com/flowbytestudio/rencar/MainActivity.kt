@@ -20,13 +20,16 @@ import com.flowbytestudio.rencar.data.auth.AuthSession
 import com.flowbytestudio.rencar.data.settings.OnboardingPreferences
 import com.flowbytestudio.rencar.data.settings.ThemeController
 import com.flowbytestudio.rencar.navigation.AppNavGraph
+import com.flowbytestudio.rencar.navigation.LicenseUploadRoute
 import com.flowbytestudio.rencar.navigation.LoginRoute
 import com.flowbytestudio.rencar.navigation.OnboardingRoute
+import com.flowbytestudio.rencar.navigation.RegisterRoute
 import com.flowbytestudio.rencar.navigation.RencarNavBar
 import com.flowbytestudio.rencar.navigation.ReservationRoute
 import com.flowbytestudio.rencar.navigation.SettingsRoute
 import com.flowbytestudio.rencar.ui.screens.login.LoginScreen
 import com.flowbytestudio.rencar.ui.screens.onboarding.OnboardingScreen
+import com.flowbytestudio.rencar.ui.screens.register.RegisterScreen
 import com.flowbytestudio.rencar.ui.theme.RencarTheme
 
 class MainActivity : ComponentActivity() {
@@ -71,6 +74,14 @@ private fun RencarApp() {
             composable<LoginRoute> {
                 LoginScreen(
                     onLoggedIn = { /* AuthSession handles state */ },
+                    onNavigateToRegister = { authNavController.navigate(RegisterRoute) },
+                )
+            }
+
+            composable<RegisterRoute> {
+                RegisterScreen(
+                    onRegistered = { /* AuthSession handles state */ },
+                    onNavigateToLogin = { authNavController.popBackStack() },
                 )
             }
         }
@@ -81,7 +92,8 @@ private fun RencarApp() {
     val navController = rememberNavController()
     val currentDestination = navController.currentBackStackEntryAsState().value?.destination
     val showBottomBar = currentDestination?.hasRoute(ReservationRoute::class) != true &&
-        currentDestination?.hasRoute(SettingsRoute::class) != true
+        currentDestination?.hasRoute(SettingsRoute::class) != true &&
+        currentDestination?.hasRoute(LicenseUploadRoute::class) != true
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),

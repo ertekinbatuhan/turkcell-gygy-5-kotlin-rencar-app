@@ -5,6 +5,7 @@ data class ProfileUiState(
     val phone: String = "",
     val avatarUrl: String? = null,
     val isLicenseVerified: Boolean = false,
+    val licenseStatus: String = "NOT_SUBMITTED",
     val licenseClass: String = "B sınıfı · geçerli",
     val isLoggingOut: Boolean = false,
 )
