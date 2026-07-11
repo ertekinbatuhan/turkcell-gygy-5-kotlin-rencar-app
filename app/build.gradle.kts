@@ -23,7 +23,15 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Prod'da tek satirlik degisiklik: bu satiri kaldirmak (veya false yapmak) yeterli.
+            // Onboarding gorunurlugu asil kaynagi olan OnboardingPreferences.hasSeenOnboarding
+            // zaten kalici; bu bayrak sadece gelistirme sirasinda her acilista tekrar
+            // gorulebilmesi icin gecici olarak onune geciyor.
+            buildConfigField("boolean", "ALWAYS_SHOW_ONBOARDING", "true")
+        }
         release {
+            buildConfigField("boolean", "ALWAYS_SHOW_ONBOARDING", "false")
             optimization {
                 enable = false
             }
@@ -35,6 +43,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

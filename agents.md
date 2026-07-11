@@ -121,6 +121,9 @@ Bunun istisnası: tek dosyada, tek satırlık, geri alınması trivial düzeltme
 - **Turkish for user-facing strings, English for code** (identifier, yorum, commit mesajı) — ikisini birbirine karıştırma.
 - **Never commit or push without being asked**, değişiklik tamamlanmış görünse de.
 - **Match existing patterns before introducing new ones** — örn. `profile` paketindeki Screen/ViewModel/UiState ayrımını takip et, her feature için yeni bir yapı icat etme.
+- **No hardcoded/mock data**, gerçek bir veri kaynağının (API, kullanıcı girdisi, kalıcı storage) olmadığı ve bunun mock'lanmasının o anki task için zorunlu/açıkça istenmiş olduğu senaryolar dışında. Mock kullanılan her yerde bunun mock olduğu ve neden mock'landığı açıkça belirtilmeli (yorum veya plan/rapor içinde), sessizce sahte veri sızdırılmamalı.
+- **Clean code ve profesyonellik zorunludur.** Anlamlı isimlendirme, tek sorumluluk, tekrar etmeyen kod (DRY), okunabilir kontrol akışı, tutarlı formatlama — bunlar opsiyonel bir tercih değil, her implementasyonda uyulması gereken asgari standarttır.
+- **Geçmiş ihlaller düzeltilmeden bırakılmaz.** Üzerinde çalışılan alanda (dokunulan dosya/özellik) daha önce bu prensiplere (clean code, no-hardcode/mock, mimari desen tutarlılığı vb.) uyulmadığı fark edilirse, bu iş kapsamının parçası sayılır ve gerekirse ilgili tasarım/kod komple yeniden yapılır — "değişmesin, dokunulmasın" varsayılmaz. Bu, 2.4'teki "no unrelated cleanup" kuralını geçersiz kılmaz: kapsam yalnızca üzerinde çalışılan özellik/ekranla sınırlı kalır, alakasız dosyalara sirayet etmez.
 
 ## 3) ÇIKTI FORMATI
 

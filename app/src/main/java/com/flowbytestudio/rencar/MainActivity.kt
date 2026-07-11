@@ -17,6 +17,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.flowbytestudio.rencar.data.auth.AuthSession
+import com.flowbytestudio.rencar.data.settings.OnboardingPreferences
 import com.flowbytestudio.rencar.data.settings.ThemeController
 import com.flowbytestudio.rencar.navigation.AppNavGraph
 import com.flowbytestudio.rencar.navigation.LoginRoute
@@ -33,6 +34,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         ThemeController.init(applicationContext)
+        OnboardingPreferences.init(applicationContext)
         setContent {
             RencarTheme {
                 RencarApp()
@@ -46,23 +48,29 @@ private fun RencarApp() {
     val isLoggedIn by AuthSession.isLoggedIn.collectAsState()
 
     if (!isLoggedIn) {
+        val hasSeenOnboarding by OnboardingPreferences.hasSeenOnboarding.collectAsState()
+        val showOnboarding = BuildConfig.ALWAYS_SHOW_ONBOARDING || !hasSeenOnboarding
+
         val authNavController = rememberNavController()
+        val proceedToLogin: () -> Unit = {
+            OnboardingPreferences.markOnboardingSeen()
+            authNavController.navigate(LoginRoute)
+        }
 
         NavHost(
             navController = authNavController,
-            startDestination = OnboardingRoute,
+            startDestination = if (showOnboarding) OnboardingRoute else LoginRoute,
         ) {
             composable<OnboardingRoute> {
                 OnboardingScreen(
-                    onStartClick = { authNavController.navigate(LoginRoute) },
-                    onLoginClick = { authNavController.navigate(LoginRoute) },
+                    onStartClick = proceedToLogin,
+                    onLoginClick = proceedToLogin,
                 )
             }
 
             composable<LoginRoute> {
                 LoginScreen(
                     onLoggedIn = { /* AuthSession handles state */ },
-                    onBack = { authNavController.popBackStack() },
                 )
             }
         }

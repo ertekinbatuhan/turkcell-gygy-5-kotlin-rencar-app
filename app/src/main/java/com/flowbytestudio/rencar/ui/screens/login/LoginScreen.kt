@@ -34,7 +34,6 @@ import com.flowbytestudio.rencar.ui.theme.*
 @Composable
 fun LoginScreen(
     onLoggedIn: () -> Unit,
-    onBack: () -> Unit = {},
     viewModel: LoginViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -59,16 +58,12 @@ fun LoginScreen(
                 .padding(horizontal = 24.dp)
         ) {
             Spacer(modifier = Modifier.height(16.dp))
-            AuthBackButton(
-                modifier = Modifier.padding(start = 8.dp, top = 4.dp),
-                onClick = {
-                    if (uiState.step == LoginStep.OTP) {
-                        viewModel.onChangePhone()
-                    } else {
-                        onBack()
-                    }
-                }
-            )
+            if (uiState.step == LoginStep.OTP) {
+                AuthBackButton(
+                    modifier = Modifier.padding(start = 8.dp, top = 4.dp),
+                    onClick = { viewModel.onChangePhone() }
+                )
+            }
             Spacer(modifier = Modifier.height(24.dp))
 
             if (uiState.step == LoginStep.PHONE) {
