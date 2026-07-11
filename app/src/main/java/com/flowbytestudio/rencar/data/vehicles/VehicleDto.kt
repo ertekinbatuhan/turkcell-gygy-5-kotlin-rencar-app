@@ -13,4 +13,13 @@ data class VehicleDto(
     val status: String,
     val latitude: Double,
     val longitude: Double,
+    // Backend bu alanları henüz döndürmüyor; detay tasarımı için önden eklendi.
+    // Nullable + default sayesinde mevcut cevaplarla uyumlu kalır.
+    val imageUrl: String? = null,
+    val fuelPercent: Int? = null,
+    val rangeKm: Int? = null,
+    val transmission: String? = null,
+    val seatCount: Int? = null,
+    val pricePerMinute: Double? = null,
+    val pricePerHour: Double? = null,
 )
