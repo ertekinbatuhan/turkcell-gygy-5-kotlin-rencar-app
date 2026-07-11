@@ -58,6 +58,8 @@ import java.util.Locale
 fun VehicleDetailSheet(
     vehicle: VehicleDto,
     distanceLabel: String?,
+    canReserve: Boolean,
+    canUnlock: Boolean,
     sheetState: SheetState,
     onDismiss: () -> Unit,
     onReserve: () -> Unit,
@@ -221,6 +223,7 @@ fun VehicleDetailSheet(
                     modifier = Modifier
                         .weight(1f)
                         .height(52.dp),
+                    enabled = canReserve,
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Primary),
                 ) {
@@ -231,6 +234,7 @@ fun VehicleDetailSheet(
                     modifier = Modifier
                         .weight(1f)
                         .height(52.dp),
+                    enabled = canUnlock,
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Primary),
                 ) {

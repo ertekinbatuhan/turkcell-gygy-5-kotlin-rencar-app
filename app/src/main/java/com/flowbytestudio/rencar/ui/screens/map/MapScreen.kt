@@ -475,9 +475,16 @@ fun MapScreen(
             val distanceLabel = myLocation?.let {
                 formatDistanceMeters(haversineMeters(it.latitude, it.longitude, vehicle.latitude, vehicle.longitude))
             }
+            
+            val hasActiveRental = uiState.activeRental != null
+            val isSelectedVehicleActiveRental = uiState.activeRental?.rental?.vehicleId == vehicle.id
+            val isVehicleAvailable = vehicle.status.equals("AVAILABLE", ignoreCase = true)
+
             VehicleDetailSheet(
                 vehicle = vehicle,
                 distanceLabel = distanceLabel,
+                canReserve = isVehicleAvailable && !hasActiveRental,
+                canUnlock = isSelectedVehicleActiveRental,
                 sheetState = sheetState,
                 onDismiss = { selectedVehicle = null },
                 onReserve = {
