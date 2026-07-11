@@ -235,6 +235,24 @@ fun MapScreen(
     var hasZoomedToUser by remember { mutableStateOf(false) }
     var cameraZoom by remember { mutableStateOf(12.0) }
 
+    // Kullanıcı konumu gelene (ya da izin reddi/timeout sonucu İstanbul'a düşülene) kadar
+    // haritanın ilk karesi hiç gösterilmez; böylece kullanıcı önce İstanbul'u görüp sonra
+    // kendi konumuna kayma hissi yaşamaz.
+    var isInitialCameraReady by remember { mutableStateOf(false) }
+
+    LaunchedEffect(hasLocationPermission) {
+        if (!hasLocationPermission) {
+            delay(4_000L)
+            if (!isInitialCameraReady) isInitialCameraReady = true
+        }
+    }
+    LaunchedEffect(myLocation) {
+        if (myLocation == null) {
+            delay(4_000L)
+        }
+        if (!isInitialCameraReady) isInitialCameraReady = true
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         AndroidView(
             modifier = Modifier.fillMaxSize(),
@@ -246,10 +264,6 @@ fun MapScreen(
                         mapLibreMap = map
                         map.uiSettings.setLogoGravity(Gravity.TOP or Gravity.END)
                         map.uiSettings.setAttributionGravity(Gravity.TOP or Gravity.END)
-                        map.cameraPosition = CameraPosition.Builder()
-                            .target(LatLng(ISTANBUL_LAT, ISTANBUL_LON))
-                            .zoom(12.0)
-                            .build()
                         map.addOnCameraIdleListener {
                             cameraZoom = map.cameraPosition.zoom
                         }
@@ -299,12 +313,16 @@ fun MapScreen(
             updateMeMarker(style, myLocation)
         }
 
-        LaunchedEffect(mapLibreMap, myLocation) {
+        LaunchedEffect(mapLibreMap, myLocation, isInitialCameraReady) {
             if (hasZoomedToUser) return@LaunchedEffect
             val map = mapLibreMap ?: return@LaunchedEffect
-            val location = myLocation ?: return@LaunchedEffect
+            if (!isInitialCameraReady) return@LaunchedEffect
+            val target = myLocation ?: LatLng(ISTANBUL_LAT, ISTANBUL_LON)
             hasZoomedToUser = true
-            map.animateCamera(CameraUpdateFactory.newLatLngZoom(location, 15.0))
+            map.cameraPosition = CameraPosition.Builder()
+                .target(target)
+                .zoom(if (myLocation != null) 15.0 else 12.0)
+                .build()
         }
 
         LaunchedEffect(uiState.filteredVehicles, mapStyle, symbolManager, cameraZoom, clusterColor) {
@@ -388,8 +406,13 @@ fun MapScreen(
             }
         }
 
-        if (uiState.isLoading && uiState.vehicles.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        if (!isInitialCameraReady || (uiState.isLoading && uiState.vehicles.isEmpty())) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Background),
+                contentAlignment = Alignment.Center,
+            ) {
                 CircularProgressIndicator(color = Primary)
             }
         }

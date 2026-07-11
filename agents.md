@@ -120,6 +120,7 @@ Bunun istisnası: tek dosyada, tek satırlık, geri alınması trivial düzeltme
 - **No unrelated cleanup riding along with a feature/fix.** Başka bir sorun fark edersen söyle, aynı değişikliğe sessizce ekleme.
 - **Turkish for user-facing strings, English for code** (identifier, yorum, commit mesajı) — ikisini birbirine karıştırma.
 - **Never commit or push without being asked**, değişiklik tamamlanmış görünse de.
+- **"commit mesajı oluştur" (veya benzeri) dendiğinde**: İngilizce, `feat:`/`fix:`/`refactor:` vb. conventional-commit tarzında kısa bir commit mesajı öner, ama **asla commit atma** — commit'i her zaman kullanıcı kendisi atar.
 - **Match existing patterns before introducing new ones** — örn. `profile` paketindeki Screen/ViewModel/UiState ayrımını takip et, her feature için yeni bir yapı icat etme.
 - **No hardcoded/mock data**, gerçek bir veri kaynağının (API, kullanıcı girdisi, kalıcı storage) olmadığı ve bunun mock'lanmasının o anki task için zorunlu/açıkça istenmiş olduğu senaryolar dışında. Mock kullanılan her yerde bunun mock olduğu ve neden mock'landığı açıkça belirtilmeli (yorum veya plan/rapor içinde), sessizce sahte veri sızdırılmamalı.
 - **Clean code ve profesyonellik zorunludur.** Anlamlı isimlendirme, tek sorumluluk, tekrar etmeyen kod (DRY), okunabilir kontrol akışı, tutarlı formatlama — bunlar opsiyonel bir tercih değil, her implementasyonda uyulması gereken asgari standarttır.
