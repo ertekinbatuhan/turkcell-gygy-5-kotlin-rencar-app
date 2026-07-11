@@ -69,6 +69,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.flowbytestudio.rencar.data.vehicles.VehicleDto
 import com.flowbytestudio.rencar.ui.theme.Background
 import com.flowbytestudio.rencar.ui.theme.Danger
+import com.flowbytestudio.rencar.ui.theme.DarkRencarColors
+import com.flowbytestudio.rencar.ui.theme.LocalRencarColors
 import com.flowbytestudio.rencar.ui.theme.Primary
 import com.flowbytestudio.rencar.ui.theme.Success
 import com.flowbytestudio.rencar.ui.theme.Surface
@@ -100,12 +102,15 @@ import org.maplibre.android.style.layers.PropertyFactory
 import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.Point
+import kotlin.math.pow
 
 private const val ISTANBUL_LAT = 41.0082
 private const val ISTANBUL_LON = 28.9784
 private const val VEHICLE_REFRESH_INTERVAL_MS = 10_000L
 private const val ME_SOURCE_ID = "me"
 private val ME_MARKER_COLOR = android.graphics.Color.parseColor("#4285F4")
+private const val CLUSTER_MAX_ZOOM = 15.0
+private const val CLUSTER_RADIUS_DEGREES_AT_ZOOM0 = 40.0
 
 private const val OSM_RASTER_STYLE = """
 {
@@ -130,6 +135,34 @@ private const val OSM_RASTER_STYLE = """
 }
 """
 
+private const val DARK_RASTER_STYLE = """
+{
+  "version": 8,
+  "sources": {
+    "carto-dark-tiles": {
+      "type": "raster",
+      "tiles": ["https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"],
+      "tileSize": 256,
+      "attribution": "&copy; OpenStreetMap contributors &copy; CARTO"
+    }
+  },
+  "layers": [
+    {
+      "id": "carto-dark-tiles-layer",
+      "type": "raster",
+      "source": "carto-dark-tiles",
+      "minzoom": 0,
+      "maxzoom": 19,
+      "paint": {
+        "raster-brightness-min": 0.15,
+        "raster-brightness-max": 1.0,
+        "raster-contrast": -0.1
+      }
+    }
+  ]
+}
+"""
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapScreen(
@@ -142,6 +175,8 @@ fun MapScreen(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val density = context.resources.displayMetrics.density
+    val clusterColor = Primary.toArgb()
+    val isDarkTheme = LocalRencarColors.current == DarkRencarColors
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val sheetState = rememberModalBottomSheetState()
@@ -198,6 +233,7 @@ fun MapScreen(
     var symbolManager by remember { mutableStateOf<SymbolManager?>(null) }
     var hasCenteredOnVehicles by remember { mutableStateOf(false) }
     var hasZoomedToUser by remember { mutableStateOf(false) }
+    var cameraZoom by remember { mutableStateOf(12.0) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         AndroidView(
@@ -214,35 +250,29 @@ fun MapScreen(
                             .target(LatLng(ISTANBUL_LAT, ISTANBUL_LON))
                             .zoom(12.0)
                             .build()
-                        map.setStyle(Style.Builder().fromJson(OSM_RASTER_STYLE)) { style ->
-                            style.addSource(GeoJsonSource(ME_SOURCE_ID))
-                            style.addLayer(
-                                CircleLayer("me-halo-layer", ME_SOURCE_ID).withProperties(
-                                    PropertyFactory.circleColor(ME_MARKER_COLOR),
-                                    PropertyFactory.circleRadius(20f),
-                                    PropertyFactory.circleOpacity(0.2f),
-                                    PropertyFactory.circleBlur(0.4f),
-                                ),
-                            )
-                            style.addLayer(
-                                CircleLayer("me-layer", ME_SOURCE_ID).withProperties(
-                                    PropertyFactory.circleColor(ME_MARKER_COLOR),
-                                    PropertyFactory.circleRadius(9f),
-                                    PropertyFactory.circleStrokeColor(android.graphics.Color.WHITE),
-                                    PropertyFactory.circleStrokeWidth(3f),
-                                ),
-                            )
-                            mapStyle = style
-                            symbolManager = SymbolManager(this, map, style).apply {
-                                iconAllowOverlap = true
-                                iconIgnorePlacement = true
-                            }
+                        map.addOnCameraIdleListener {
+                            cameraZoom = map.cameraPosition.zoom
                         }
                     }
                     mapView = this
                 }
             },
         )
+
+        LaunchedEffect(mapLibreMap, mapView, isDarkTheme) {
+            val map = mapLibreMap ?: return@LaunchedEffect
+            val view = mapView ?: return@LaunchedEffect
+            val isFirstLoad = mapStyle == null
+            symbolManager?.onDestroy()
+            loadMapStyle(map, isDarkTheme) { style ->
+                mapStyle = style
+                symbolManager = SymbolManager(view, map, style).apply {
+                    iconAllowOverlap = true
+                    iconIgnorePlacement = true
+                }
+                if (!isFirstLoad) hasCenteredOnVehicles = false
+            }
+        }
 
         DisposableEffect(lifecycleOwner, mapView) {
             val currentMapView = mapView
@@ -277,26 +307,53 @@ fun MapScreen(
             map.animateCamera(CameraUpdateFactory.newLatLngZoom(location, 15.0))
         }
 
-        LaunchedEffect(uiState.filteredVehicles, mapStyle, symbolManager) {
+        LaunchedEffect(uiState.filteredVehicles, mapStyle, symbolManager, cameraZoom, clusterColor) {
             val style = mapStyle ?: return@LaunchedEffect
             val manager = symbolManager ?: return@LaunchedEffect
             manager.deleteAll()
 
-            uiState.filteredVehicles.forEach { vehicle ->
-                val imageId = "vehicle-marker-${vehicle.id}"
-                val bitmap = MarkerBitmapFactory.create(
-                    text = "₺${vehicle.pricePerDay.toInt()}",
-                    backgroundColor = VehicleType.colorFor(vehicle.type).toArgb(),
-                    density = density,
-                )
-                style.addImage(imageId, bitmap)
-                manager.create(
-                    SymbolOptions()
-                        .withLatLng(LatLng(vehicle.latitude, vehicle.longitude))
-                        .withIconImage(imageId)
-                        .withIconAnchor("bottom")
-                        .withData(JsonPrimitive(vehicle.id)),
-                )
+            val clusters = clusterVehicles(uiState.filteredVehicles, cameraZoom)
+
+            clusters.forEach { cluster ->
+                if (cluster.vehicles.size == 1) {
+                    val vehicle = cluster.vehicles.first()
+                    val type = VehicleType.fromApiValue(vehicle.type) ?: VehicleType.SEDAN
+                    val imageId = "vehicle-marker-${vehicle.id}"
+                    style.addImage(
+                        imageId,
+                        MarkerBitmapFactory.create(
+                            text = "₺${vehicle.pricePerDay.toInt()}",
+                            backgroundColor = type.color.toArgb(),
+                            density = density,
+                        ),
+                    )
+                    manager.create(
+                        SymbolOptions()
+                            .withLatLng(LatLng(vehicle.latitude, vehicle.longitude))
+                            .withIconImage(imageId)
+                            .withIconAnchor("bottom")
+                            .withData(JsonPrimitive(vehicle.id)),
+                    )
+                } else {
+                    val imageId = "vehicle-cluster-${cluster.vehicles.size}"
+                    style.addImage(
+                        imageId,
+                        MarkerBitmapFactory.createClusterBubble(
+                            count = cluster.vehicles.size,
+                            backgroundColor = clusterColor,
+                            density = density,
+                        ),
+                    )
+                    manager.create(
+                        SymbolOptions()
+                            .withLatLng(LatLng(cluster.latitude, cluster.longitude))
+                            .withIconImage(imageId)
+                            .withIconAnchor("bottom")
+                            .withData(
+                                JsonPrimitive(cluster.vehicles.joinToString(",") { it.id }),
+                            ),
+                    )
+                }
             }
 
             if (!hasCenteredOnVehicles && uiState.filteredVehicles.isNotEmpty()) {
@@ -313,10 +370,16 @@ fun MapScreen(
                 onDispose {}
             } else {
                 val listener = OnSymbolClickListener { symbol: Symbol ->
-                    val vehicleId = symbol.data?.asString
-                    val vehicle = viewModel.uiState.value.vehicles.find { it.id == vehicleId }
-                    if (vehicle != null) {
-                        selectedVehicle = vehicle
+                    val data = symbol.data?.asString
+                    val ids = data?.split(",").orEmpty()
+                    if (ids.size == 1) {
+                        val vehicle = viewModel.uiState.value.vehicles.find { it.id == ids.first() }
+                        if (vehicle != null) {
+                            selectedVehicle = vehicle
+                        }
+                    } else if (ids.size > 1) {
+                        val clusterVehicles = viewModel.uiState.value.vehicles.filter { it.id in ids }
+                        focusCameraOnVehicles(mapLibreMap, clusterVehicles)
                     }
                     true
                 }
@@ -428,6 +491,98 @@ fun MapScreen(
             )
         }
     }
+}
+
+private fun loadMapStyle(map: MapLibreMap, isDarkTheme: Boolean, onLoaded: (Style) -> Unit) {
+    val styleJson = if (isDarkTheme) DARK_RASTER_STYLE else OSM_RASTER_STYLE
+    map.setStyle(Style.Builder().fromJson(styleJson)) { style ->
+        style.addSource(GeoJsonSource(ME_SOURCE_ID))
+        style.addLayer(
+            CircleLayer("me-halo-layer", ME_SOURCE_ID).withProperties(
+                PropertyFactory.circleColor(ME_MARKER_COLOR),
+                PropertyFactory.circleRadius(20f),
+                PropertyFactory.circleOpacity(0.2f),
+                PropertyFactory.circleBlur(0.4f),
+            ),
+        )
+        style.addLayer(
+            CircleLayer("me-layer", ME_SOURCE_ID).withProperties(
+                PropertyFactory.circleColor(ME_MARKER_COLOR),
+                PropertyFactory.circleRadius(9f),
+                PropertyFactory.circleStrokeColor(android.graphics.Color.WHITE),
+                PropertyFactory.circleStrokeWidth(3f),
+            ),
+        )
+        onLoaded(style)
+    }
+}
+
+private data class VehicleCluster(val latitude: Double, val longitude: Double, val vehicles: List<VehicleDto>)
+
+/**
+ * Greedy mesafe tabanlı gruplama: bir aracı, kendisine en yakın ve halihazırda büyümekte olan
+ * bir cluster'ın merkezine belirli bir eşik (zoom'a göre küçülen derece yarıçapı) içindeyse o
+ * cluster'a ekler; değilse yeni bir cluster başlatır. Sabit ızgara sınırlarının aksine yakın
+ * araçları rastgele bölmez.
+ */
+private fun clusterVehicles(vehicles: List<VehicleDto>, zoom: Double): List<VehicleCluster> {
+    if (zoom >= CLUSTER_MAX_ZOOM || vehicles.isEmpty()) {
+        return vehicles.map { VehicleCluster(it.latitude, it.longitude, listOf(it)) }
+    }
+
+    val thresholdDegrees = CLUSTER_RADIUS_DEGREES_AT_ZOOM0 / 2.0.pow(zoom)
+
+    data class MutableCluster(var sumLat: Double, var sumLon: Double, val members: MutableList<VehicleDto>) {
+        val centerLat get() = sumLat / members.size
+        val centerLon get() = sumLon / members.size
+    }
+
+    val clusters = mutableListOf<MutableCluster>()
+    vehicles.forEach { vehicle ->
+        val nearest = clusters.minByOrNull { cluster ->
+            val dLat = cluster.centerLat - vehicle.latitude
+            val dLon = cluster.centerLon - vehicle.longitude
+            dLat * dLat + dLon * dLon
+        }
+        val isWithinThreshold = nearest != null &&
+            run {
+                val dLat = nearest.centerLat - vehicle.latitude
+                val dLon = nearest.centerLon - vehicle.longitude
+                (dLat * dLat + dLon * dLon) <= thresholdDegrees * thresholdDegrees
+            }
+        if (nearest != null && isWithinThreshold) {
+            nearest.sumLat += vehicle.latitude
+            nearest.sumLon += vehicle.longitude
+            nearest.members.add(vehicle)
+        } else {
+            clusters.add(MutableCluster(vehicle.latitude, vehicle.longitude, mutableListOf(vehicle)))
+        }
+    }
+
+    // İkinci geçiş: sıralamaya bağlı olarak ayrı kalmış ama birbirine çok yakın cluster'ları birleştir.
+    var merged = true
+    while (merged) {
+        merged = false
+        outer@ for (i in clusters.indices) {
+            for (j in clusters.indices) {
+                if (i == j) continue
+                val a = clusters[i]
+                val b = clusters[j]
+                val dLat = a.centerLat - b.centerLat
+                val dLon = a.centerLon - b.centerLon
+                if (dLat * dLat + dLon * dLon <= thresholdDegrees * thresholdDegrees) {
+                    a.sumLat += b.sumLat
+                    a.sumLon += b.sumLon
+                    a.members.addAll(b.members)
+                    clusters.removeAt(j)
+                    merged = true
+                    break@outer
+                }
+            }
+        }
+    }
+
+    return clusters.map { VehicleCluster(it.centerLat, it.centerLon, it.members) }
 }
 
 private fun focusCameraOnVehicles(map: MapLibreMap?, vehicles: List<VehicleDto>) {
