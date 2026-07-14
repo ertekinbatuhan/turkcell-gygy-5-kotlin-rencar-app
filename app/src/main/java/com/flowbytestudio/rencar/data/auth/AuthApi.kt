@@ -15,6 +15,12 @@ interface AuthApi {
     @POST("auth/verify-otp")
     suspend fun verifyOtp(@Body request: VerifyOtpRequest): AuthResponse
 
+    @POST("auth/refresh")
+    suspend fun refresh(@Body request: RefreshTokenRequest): AuthResponse
+
+    @POST("auth/logout")
+    suspend fun logout()
+
     @GET("auth/me")
     suspend fun me(): UserResponse
 }

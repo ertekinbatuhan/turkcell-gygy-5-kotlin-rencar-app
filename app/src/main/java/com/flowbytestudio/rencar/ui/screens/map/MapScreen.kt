@@ -67,11 +67,13 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.flowbytestudio.rencar.data.vehicles.VehicleDto
+import com.flowbytestudio.rencar.ui.common.formatTl
 import com.flowbytestudio.rencar.ui.theme.Background
 import com.flowbytestudio.rencar.ui.theme.Danger
 import com.flowbytestudio.rencar.ui.theme.DarkRencarColors
 import com.flowbytestudio.rencar.ui.theme.LocalRencarColors
 import com.flowbytestudio.rencar.ui.theme.Primary
+import com.flowbytestudio.rencar.ui.theme.PrimaryVariant
 import com.flowbytestudio.rencar.ui.theme.Success
 import com.flowbytestudio.rencar.ui.theme.Surface
 import com.flowbytestudio.rencar.ui.theme.TextPrimary
@@ -330,19 +332,27 @@ fun MapScreen(
             val manager = symbolManager ?: return@LaunchedEffect
             manager.deleteAll()
 
+            // Mesafeye göre kümeleme (remote): yakın araçlar tek balonda toplanır.
             val clusters = clusterVehicles(uiState.filteredVehicles, cameraZoom)
 
             clusters.forEach { cluster ->
                 if (cluster.vehicles.size == 1) {
                     val vehicle = cluster.vehicles.first()
-                    val type = VehicleType.fromApiValue(vehicle.type) ?: VehicleType.SEDAN
-                    val imageId = "vehicle-marker-${vehicle.id}"
+                    val available = vehicle.status.equals("AVAILABLE", ignoreCase = true)
+                    // Marker balonu: varsa dakikalık fiyat, yoksa günlük.
+                    val priceText = vehicle.pricePerMinute
+                        ?.let { "₺${formatTl(it)}/dk" }
+                        ?: "₺${formatTl(vehicle.pricePerDay)}"
+                    // status'ü id'ye katarak müsait->meşgul geçişinde marker görselini tazeleriz.
+                    val imageId = "vehicle-marker-${vehicle.id}-${if (available) "a" else "b"}"
                     style.addImage(
                         imageId,
                         MarkerBitmapFactory.create(
-                            text = "₺${vehicle.pricePerDay.toInt()}",
-                            backgroundColor = type.color.toArgb(),
+                            text = priceText,
+                            backgroundColor = VehicleType.colorFor(vehicle.type).toArgb(),
                             density = density,
+                            // Meşgul (RENTED/RESERVED) araç gri gösterilir.
+                            disabled = !available,
                         ),
                     )
                     manager.create(
@@ -425,12 +435,45 @@ fun MapScreen(
         ) {
             SearchBar()
 
-            uiState.activeRental?.let { active ->
-                Spacer(modifier = Modifier.height(12.dp))
-                ActiveRentalBanner(
-                    vehicleName = active.vehicle?.let { "${it.brand} ${it.model}" },
-                    onClick = { onNavigateToActiveRental(active.rental.id) },
-                )
+            when (val banner = uiState.banner) {
+                is MapBanner.ActiveRental -> {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    StateBanner(
+                        title = "Kiralama aktif" +
+                            (banner.currentCost?.let { " · ₺${formatTl(it)}" } ?: ""),
+                        subtitle = banner.vehicleName,
+                        dotColor = Success,
+                        actionLabel = "Devam et",
+                        actionColor = Success,
+                        onClick = { onNavigateToActiveRental(banner.rentalId) },
+                    )
+                }
+
+                is MapBanner.PreparingRental -> {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    StateBanner(
+                        title = "Araç hazırlanıyor · fotoğrafları tamamla",
+                        subtitle = banner.vehicleName,
+                        dotColor = PrimaryVariant,
+                        actionLabel = "Tamamla",
+                        actionColor = PrimaryVariant,
+                        onClick = { onNavigateToHandover(banner.rentalId) },
+                    )
+                }
+
+                is MapBanner.ActiveReservation -> {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    StateBanner(
+                        title = "Rezervasyon aktif · kalan ${formatMmSs(banner.remainingSeconds)}",
+                        subtitle = banner.vehicleName,
+                        dotColor = PrimaryVariant,
+                        actionLabel = "Görüntüle",
+                        actionColor = PrimaryVariant,
+                        onClick = { onNavigateToReservation(banner.vehicleId) },
+                    )
+                }
+
+                null -> Unit
             }
 
             if (uiState.error != null) {
@@ -462,6 +505,7 @@ fun MapScreen(
         BottomVehiclesCard(
             modifier = Modifier.align(Alignment.BottomCenter),
             uiState = uiState,
+            onSegmentSelected = { segment -> viewModel.onSegmentSelected(segment) },
             onTypeSelected = { type ->
                 viewModel.onTypeSelected(type)
                 focusCameraOnVehicles(mapLibreMap, viewModel.uiState.value.filteredVehicles)
@@ -500,23 +544,17 @@ fun MapScreen(
             }
             
             val hasActiveRental = uiState.activeRental != null
-            val isSelectedVehicleActiveRental = uiState.activeRental?.rental?.vehicleId == vehicle.id
             val isVehicleAvailable = vehicle.status.equals("AVAILABLE", ignoreCase = true)
 
             VehicleDetailSheet(
                 vehicle = vehicle,
                 distanceLabel = distanceLabel,
                 canReserve = isVehicleAvailable && !hasActiveRental,
-                canUnlock = isSelectedVehicleActiveRental,
                 sheetState = sheetState,
                 onDismiss = { selectedVehicle = null },
                 onReserve = {
                     selectedVehicle = null
                     onNavigateToReservation(vehicle.id)
-                },
-                onUnlock = {
-                    selectedVehicle = null
-                    onNavigateToHandover(vehicle.id)
                 },
             )
         }
@@ -682,9 +720,15 @@ private fun SearchBar() {
     }
 }
 
+// Harita üstündeki durum banner'ı (aktif kiralama / hazırlıktaki kiralama / aktif rezervasyon)
+// aynı görsel dilde; yalnız metin, nokta rengi ve aksiyon değişir.
 @Composable
-private fun ActiveRentalBanner(
-    vehicleName: String?,
+private fun StateBanner(
+    title: String,
+    subtitle: String?,
+    dotColor: Color,
+    actionLabel: String,
+    actionColor: Color,
     onClick: () -> Unit,
 ) {
     Row(
@@ -700,23 +744,37 @@ private fun ActiveRentalBanner(
             modifier = Modifier
                 .size(8.dp)
                 .clip(CircleShape)
-                .background(Success),
+                .background(dotColor),
         )
         Spacer(modifier = Modifier.width(8.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Background,
+            )
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    fontSize = 11.sp,
+                    color = Background.copy(alpha = 0.7f),
+                )
+            }
+        }
+        Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = if (vehicleName != null) "Kiralama aktif · $vehicleName" else "Kiralama aktif",
-            fontSize = 13.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = Background,
-            modifier = Modifier.weight(1f),
-        )
-        Text(
-            text = "Devam et",
+            text = actionLabel,
             fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
-            color = Success,
+            color = actionColor,
         )
     }
+}
+
+private fun formatMmSs(totalSeconds: Long): String {
+    val safe = totalSeconds.coerceAtLeast(0)
+    return "%02d:%02d".format(safe / 60, safe % 60)
 }
 
 @Composable
@@ -750,6 +808,7 @@ private fun ErrorBanner(message: String, onRetry: () -> Unit) {
 private fun BottomVehiclesCard(
     modifier: Modifier = Modifier,
     uiState: MapUiState,
+    onSegmentSelected: (String?) -> Unit,
     onTypeSelected: (String?) -> Unit,
     onFindNearestClick: () -> Unit,
 ) {
@@ -761,7 +820,7 @@ private fun BottomVehiclesCard(
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Text(
-                text = "Yakınında ${uiState.filteredVehicles.size} araç",
+                text = "Yakınında ${uiState.availableFilteredVehicles.size} araç",
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary,
@@ -775,6 +834,30 @@ private fun BottomVehiclesCard(
 
             Spacer(modifier = Modifier.height(14.dp))
 
+            // Fiyat segmenti sekmeleri (sunucu tarafı ?segment filtresi).
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                SegmentTab(
+                    label = "Tümü",
+                    selected = uiState.selectedSegment == null,
+                    onClick = { onSegmentSelected(null) },
+                )
+                VehicleSegment.entries.forEach { segment ->
+                    SegmentTab(
+                        label = segment.label,
+                        selected = uiState.selectedSegment == segment.apiValue,
+                        onClick = { onSegmentSelected(segment.apiValue) },
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Karoseri tipi filtresi (istemci tarafı, segmentin üstünde çalışır).
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -812,6 +895,27 @@ private fun BottomVehiclesCard(
                 Text(text = "En Yakın Aracı Bul", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             }
         }
+    }
+}
+
+@Composable
+private fun SegmentTab(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Surface(
+        modifier = Modifier.clickable(onClick = onClick),
+        shape = RoundedCornerShape(20.dp),
+        color = if (selected) Primary else Background,
+    ) {
+        Text(
+            text = label,
+            fontSize = 13.sp,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            color = if (selected) Color.White else TextSecondary,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 9.dp),
+        )
     }
 }
 

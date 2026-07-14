@@ -15,10 +15,15 @@ import androidx.core.graphics.ColorUtils
 
 object MarkerBitmapFactory {
 
-    fun create(text: String, backgroundColor: Int, density: Float): Bitmap {
+    // Meşgul (RENTED/RESERVED) araçların gri "devre dışı" marker'ı için sabit renkler.
+    private val DISABLED_BG = Color.parseColor("#9AA3AF")
+    private val DISABLED_TEXT = Color.parseColor("#F3F4F6")
+
+    fun create(text: String, backgroundColor: Int, density: Float, disabled: Boolean = false): Bitmap {
+        val fillColor = if (disabled) DISABLED_BG else backgroundColor
         val textPaint = TextPaint().apply {
             isAntiAlias = true
-            color = Color.WHITE
+            color = if (disabled) DISABLED_TEXT else Color.WHITE
             textSize = 13f * density
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         }
@@ -38,7 +43,7 @@ object MarkerBitmapFactory {
 
         val bgPaint = Paint().apply {
             isAntiAlias = true
-            color = backgroundColor
+            color = fillColor
         }
 
         val bubbleRect = RectF(0f, 0f, bubbleWidth, bubbleHeight)

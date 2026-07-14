@@ -66,6 +66,7 @@ dependencies {
     implementation(libs.okhttp.logging.interceptor)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.coil.compose)
+    implementation(libs.socket.io.client)
     implementation(libs.maplibre.android.sdk)
     implementation(libs.maplibre.annotation.plugin) {
         exclude(group = "org.maplibre.gl", module = "android-sdk")

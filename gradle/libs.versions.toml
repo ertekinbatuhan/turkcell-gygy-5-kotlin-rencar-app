@@ -18,6 +18,7 @@ maplibreAnnotation = "3.0.2"
 playServicesLocation = "21.3.0"
 datastorePreferences = "1.1.1"
 coil = "2.7.0"
+socketIo = "2.1.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -47,6 +48,7 @@ maplibre-annotation-plugin = { group = "org.maplibre.gl", name = "android-plugin
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
 androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastorePreferences" }
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
+socket-io-client = { group = "io.socket", name = "socket.io-client", version.ref = "socketIo" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

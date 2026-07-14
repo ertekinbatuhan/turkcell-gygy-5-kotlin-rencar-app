@@ -39,15 +39,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.flowbytestudio.rencar.ui.common.formatTl
 import com.flowbytestudio.rencar.ui.theme.Background
 import com.flowbytestudio.rencar.ui.theme.Danger
+import com.flowbytestudio.rencar.ui.theme.DangerLight
 import com.flowbytestudio.rencar.ui.theme.Primary
 import com.flowbytestudio.rencar.ui.theme.PrimaryLight
 import com.flowbytestudio.rencar.ui.theme.Success
-import com.flowbytestudio.rencar.ui.theme.SuccessLight
 import com.flowbytestudio.rencar.ui.theme.Surface
 import com.flowbytestudio.rencar.ui.theme.TextPrimary
 import com.flowbytestudio.rencar.ui.theme.TextSecondary
+
+private val WarningAmber = Color(0xFFF59E0B)
 
 @Composable
 fun HistoryScreen(viewModel: HistoryViewModel = viewModel()) {
@@ -73,7 +76,7 @@ private fun HistoryContent(uiState: HistoryUiState) {
             if (uiState.rentals.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(3.dp))
                 Text(
-                    text = "Bu ay ${uiState.tripCountThisMonth} yolculuk · ₺${"%.0f".format(uiState.totalSpentThisMonth)} harcama",
+                    text = "Bu ay ${uiState.tripCountThisMonth} yolculuk · ₺${formatTl(uiState.totalSpentThisMonth)} harcama",
                     fontSize = 14.5.sp,
                     color = TextSecondary,
                 )
@@ -89,9 +92,9 @@ private fun HistoryContent(uiState: HistoryUiState) {
             uiState.rentals.isEmpty() -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
-                        text = "Henüz bir kiralaman yok",
+                        text = uiState.errorMessage ?: "Henüz bir kiralaman yok",
                         fontSize = 16.5.sp,
-                        color = TextSecondary,
+                        color = if (uiState.errorMessage != null) Danger else TextSecondary,
                     )
                 }
             }
@@ -141,18 +144,25 @@ private fun RentalCard(rental: RentalUiModel) {
                             maxLines = 1,
                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                         )
-                        Text(
-                            text = "₺${"%.2f".format(rental.totalPrice)}",
-                            fontSize = 16.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary,
-                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                text = rental.priceLabel,
+                                fontSize = 16.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary,
+                            )
+                            if (rental.isUnpaidCompleted) {
+                                Spacer(modifier = Modifier.height(3.dp))
+                                UnpaidBadge()
+                            }
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(3.dp))
 
                     Text(
-                        text = rental.startDate,
+                        text = rental.dateLabel,
                         fontSize = 13.5.sp,
                         color = TextSecondary,
                     )
@@ -163,6 +173,7 @@ private fun RentalCard(rental: RentalUiModel) {
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        PlanChip(text = rental.planLabel)
                         InfoChip(text = "${rental.durationMinutes} dk")
                         InfoChip(text = "${"%.1f".format(rental.distanceKm)} km")
                     }
@@ -197,10 +208,46 @@ private fun InfoChip(text: String) {
 }
 
 @Composable
+private fun PlanChip(text: String) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(6.dp))
+            .background(PrimaryLight)
+            .padding(horizontal = 8.dp, vertical = 3.dp),
+    ) {
+        Text(
+            text = text,
+            fontSize = 12.5.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Primary,
+        )
+    }
+}
+
+@Composable
+private fun UnpaidBadge() {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(6.dp))
+            .background(DangerLight)
+            .padding(horizontal = 8.dp, vertical = 3.dp),
+    ) {
+        Text(
+            text = "Ödenmedi",
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Danger,
+        )
+    }
+}
+
+@Composable
 private fun statusVisual(status: RentalStatus): Color = when (status) {
     RentalStatus.ACTIVE -> Primary
+    RentalStatus.PREPARING -> WarningAmber
     RentalStatus.COMPLETED -> Success
     RentalStatus.CANCELLED -> Danger
+    RentalStatus.OTHER -> TextSecondary
 }
 
 @Composable
@@ -227,12 +274,13 @@ private fun StatusDot(status: RentalStatus, modifier: Modifier = Modifier) {
                 tint = Color.White,
                 modifier = Modifier.size(11.dp),
             )
-            RentalStatus.ACTIVE -> Box(
+            RentalStatus.ACTIVE, RentalStatus.PREPARING -> Box(
                 modifier = Modifier
                     .size(6.dp)
                     .clip(CircleShape)
                     .background(Color.White),
             )
+            RentalStatus.OTHER -> Unit
         }
     }
 }

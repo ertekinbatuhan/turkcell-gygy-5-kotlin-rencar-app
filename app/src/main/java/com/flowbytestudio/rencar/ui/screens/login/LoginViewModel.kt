@@ -1,6 +1,5 @@
 package com.flowbytestudio.rencar.ui.screens.login
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flowbytestudio.rencar.data.auth.AuthRepository
@@ -46,15 +45,13 @@ class LoginViewModel(
 
         // Backend expects format: +905317452223
         val fullPhone = "+90$phoneDigits"
-        Log.d("RencarAuth", "Login Request: phone=$fullPhone")
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 repository.requestOtp(fullPhone)
                     .onSuccess {
-                        Log.d("RencarAuth", "Login Success: phone=$fullPhone, status=200")
-                        _uiState.update { 
+                        _uiState.update {
                             it.copy(
                                 isLoading = false, 
                                 step = LoginStep.OTP,
@@ -66,8 +63,6 @@ class LoginViewModel(
                     }
                     .onFailure { throwable ->
                         val statusCode = (throwable as? HttpException)?.code()
-                        Log.e("RencarAuth", "Login Failure: phone=$fullPhone, status=$statusCode", throwable)
-                        
                         val errorMessage = when {
                             throwable is IOException -> "Bağlantı hatası oluştu."
                             statusCode == 401 -> "Bu telefon numarasına kayıtlı kullanıcı yok."
@@ -76,7 +71,6 @@ class LoginViewModel(
                         _uiState.update { it.copy(isLoading = false, error = errorMessage) }
                     }
             } catch (e: Exception) {
-                Log.e("RencarAuth", "Login Exception: phone=$fullPhone", e)
                 _uiState.update {
                     it.copy(isLoading = false, error = "Bağlantı hatası oluştu.")
                 }
@@ -106,21 +100,15 @@ class LoginViewModel(
             _uiState.update { it.copy(error = "6 haneli kodu eksiksiz girin.") }
             return
         }
-        
-        Log.d("RencarAuth", "Verify Request: phone=$fullPhone, code=$code")
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 repository.verifyOtp(fullPhone, code)
                     .onSuccess {
-                        Log.d("RencarAuth", "Verify Success: phone=$fullPhone, status=200")
                         _uiState.update { it.copy(isLoading = false, isLoggedIn = true) }
                     }
                     .onFailure { throwable ->
-                        val statusCode = (throwable as? HttpException)?.code()
-                        Log.e("RencarAuth", "Verify Failure: phone=$fullPhone, code=$code, status=$statusCode", throwable)
-                        
                         val errorMessage = if (throwable is IOException) {
                             "Bağlantı hatası oluştu."
                         } else {
@@ -129,7 +117,6 @@ class LoginViewModel(
                         _uiState.update { it.copy(isLoading = false, error = errorMessage) }
                     }
             } catch (e: Exception) {
-                Log.e("RencarAuth", "Verify Exception: phone=$fullPhone", e)
                 _uiState.update {
                     it.copy(isLoading = false, error = "Bağlantı hatası oluştu.")
                 }

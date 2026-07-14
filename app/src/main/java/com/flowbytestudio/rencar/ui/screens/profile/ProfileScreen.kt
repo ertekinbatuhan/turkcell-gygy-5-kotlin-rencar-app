@@ -1,5 +1,7 @@
 package com.flowbytestudio.rencar.ui.screens.profile
 
+import android.content.Intent
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -21,40 +23,55 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.automirrored.outlined.Logout
-import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.CardGiftcard
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.CreditCard
 import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.PersonAdd
+import androidx.compose.material.icons.outlined.HourglassEmpty
+import androidx.compose.material.icons.outlined.Insights
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Shield
+import androidx.compose.material.icons.outlined.WarningAmber
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.layout.ContentScale
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.flowbytestudio.rencar.ui.common.formatTl
 import com.flowbytestudio.rencar.ui.theme.Background
 import com.flowbytestudio.rencar.ui.theme.BorderLight
 import com.flowbytestudio.rencar.ui.theme.Danger
+import com.flowbytestudio.rencar.ui.theme.DangerLight
+import com.flowbytestudio.rencar.ui.theme.Primary
+import com.flowbytestudio.rencar.ui.theme.PrimaryLight
 import com.flowbytestudio.rencar.ui.theme.Success
 import com.flowbytestudio.rencar.ui.theme.SuccessLight
 import com.flowbytestudio.rencar.ui.theme.Surface
 import com.flowbytestudio.rencar.ui.theme.TextPrimary
 import com.flowbytestudio.rencar.ui.theme.TextSecondary
+
+private val WarningAmber = Color(0xFFF59E0B)
+private val WarningAmberLight = Color(0x1AF59E0B)
 
 @Composable
 fun ProfileScreen(
@@ -65,18 +82,15 @@ fun ProfileScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(Unit) {
-        viewModel.refreshLicenseStatus()
-    }
-
     ProfileContent(
         uiState = uiState,
         onEditClick = {},
         onPaymentMethodsClick = {},
         onSettingsClick = onNavigateToSettings,
         onSupportClick = {},
+        onLicenseActionClick = onNavigateToLicenseUpload,
         onReferralClick = onNavigateToReferral,
-        onLicenseClick = onNavigateToLicenseUpload,
+        onRefreshSessionClick = viewModel::onRefreshSession,
         onLogoutClick = viewModel::onLogoutClick,
     )
 }
@@ -88,8 +102,9 @@ private fun ProfileContent(
     onPaymentMethodsClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onSupportClick: () -> Unit,
+    onLicenseActionClick: () -> Unit,
     onReferralClick: () -> Unit,
-    onLicenseClick: () -> Unit,
+    onRefreshSessionClick: () -> Unit,
     onLogoutClick: () -> Unit,
 ) {
     Column(
@@ -110,13 +125,22 @@ private fun ProfileContent(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        if (uiState.isLicenseVerified) {
-            LicenseCard(licenseClass = uiState.licenseClass)
-            Spacer(modifier = Modifier.height(12.dp))
-        } else {
-            LicensePendingCard(status = uiState.licenseStatus, onClick = onLicenseClick)
+        uiState.stats?.let { stats ->
+            StatsCard(stats = stats)
             Spacer(modifier = Modifier.height(12.dp))
         }
+
+        LicenseSection(
+            uiState = uiState,
+            onLicenseActionClick = onLicenseActionClick,
+            onRefreshSessionClick = onRefreshSessionClick,
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        ReferralCard(onClick = onReferralClick)
+
+        Spacer(modifier = Modifier.height(12.dp))
 
         MenuCard {
             MenuItem(
@@ -135,12 +159,6 @@ private fun ProfileContent(
                 icon = Icons.AutoMirrored.Outlined.HelpOutline,
                 label = "Yardım & destek",
                 onClick = onSupportClick,
-            )
-            MenuDivider()
-            MenuItem(
-                icon = Icons.Outlined.PersonAdd,
-                label = "Davet et · ₺50 kazan",
-                onClick = onReferralClick,
             )
         }
 
@@ -225,7 +243,7 @@ private fun UserHeaderCard(
 }
 
 @Composable
-private fun LicenseCard(licenseClass: String) {
+private fun StatsCard(stats: ProfileStats) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -240,13 +258,13 @@ private fun LicenseCard(licenseClass: String) {
                 modifier = Modifier
                     .size(40.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(SuccessLight),
+                    .background(PrimaryLight),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.Shield,
+                    imageVector = Icons.Outlined.Insights,
                     contentDescription = null,
-                    tint = Success,
+                    tint = Primary,
                     modifier = Modifier.size(22.dp),
                 )
             }
@@ -255,67 +273,233 @@ private fun LicenseCard(licenseClass: String) {
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Ehliyet doğrulandı",
+                    text = "Bu ay ${stats.tripCount} yolculuk",
                     fontSize = 16.5.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = TextPrimary,
                 )
                 Text(
-                    text = licenseClass,
+                    text = "₺${formatTl(stats.totalSpent)} harcama",
                     fontSize = 14.5.sp,
                     color = TextSecondary,
                 )
-            }
-
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(SuccessLight)
-                    .padding(horizontal = 10.dp, vertical = 5.dp),
-            ) {
-                Text(
-                    text = "Onaylı",
-                    fontSize = 14.5.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Success,
-                )
+                if (stats.totalMinutes > 0 || stats.totalKm > 0.0) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        StatChip(text = "${stats.totalMinutes} dk")
+                        StatChip(text = "${"%.1f".format(stats.totalKm)} km")
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun LicensePendingCard(status: String, onClick: () -> Unit) {
-    val isUnderReview = status == "UNDER_REVIEW"
-    val (title, subtitle) = when (status) {
-        "UNDER_REVIEW" -> "Ehliyet inceleniyor" to "Başvurun onaylanınca burada görünecek"
-        "REJECTED" -> "Ehliyet reddedildi" to "Tekrar yüklemek için dokun"
-        else -> "Ehliyetini doğrula" to "Kiralama yapmadan önce tek seferlik gerekli"
-    }
-
-    Surface(
+private fun StatChip(text: String) {
+    Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .let { if (isUnderReview) it else it.clickable(onClick = onClick) },
+            .clip(RoundedCornerShape(6.dp))
+            .background(Background)
+            .padding(horizontal = 8.dp, vertical = 3.dp),
+    ) {
+        Text(
+            text = text,
+            fontSize = 12.5.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = TextSecondary,
+        )
+    }
+}
+
+@Composable
+private fun LicenseSection(
+    uiState: ProfileUiState,
+    onLicenseActionClick: () -> Unit,
+    onRefreshSessionClick: () -> Unit,
+) {
+    when (uiState.licenseStatus) {
+        "APPROVED" -> ApprovedLicenseCard(
+            licenseClass = uiState.licenseClass,
+            showRefresh = uiState.canRefreshSession,
+            isRefreshing = uiState.isRefreshingSession,
+            onRefreshSessionClick = onRefreshSessionClick,
+        )
+        "UNDER_REVIEW" -> LicenseStatusCard(
+            icon = Icons.Outlined.HourglassEmpty,
+            iconTint = WarningAmber,
+            iconBg = WarningAmberLight,
+            title = "Ehliyet incelemede",
+            subtitle = "Onay bekleniyor",
+            badgeText = "İncelemede",
+            badgeColor = WarningAmber,
+            badgeBg = WarningAmberLight,
+        )
+        "REJECTED" -> LicenseStatusCard(
+            icon = Icons.Outlined.WarningAmber,
+            iconTint = Danger,
+            iconBg = DangerLight,
+            title = "Ehliyet reddedildi",
+            subtitle = uiState.rejectReason ?: "Belgelerini tekrar yükle",
+            badgeText = "Tekrar yükle",
+            badgeColor = Primary,
+            badgeBg = PrimaryLight,
+            onClick = onLicenseActionClick,
+        )
+        "NOT_SUBMITTED" -> LicenseStatusCard(
+            icon = Icons.Outlined.Shield,
+            iconTint = Primary,
+            iconBg = PrimaryLight,
+            title = "Ehliyetini doğrula",
+            subtitle = "Araç kiralamak için ehliyet gerekli",
+            badgeText = "Doğrula",
+            badgeColor = Primary,
+            badgeBg = PrimaryLight,
+            onClick = onLicenseActionClick,
+        )
+        // UNKNOWN (henüz yüklenmedi/hata) ve beklenmeyen durumlar: kart gizli kalır,
+        // böylece durum bilinmeden yanıltıcı "doğrula" istemi gösterilmez.
+        else -> Unit
+    }
+}
+
+@Composable
+private fun ApprovedLicenseCard(
+    licenseClass: String,
+    showRefresh: Boolean,
+    isRefreshing: Boolean,
+    onRefreshSessionClick: () -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = Surface,
+        tonalElevation = 0.dp,
+    ) {
+        Column {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(SuccessLight),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Shield,
+                        contentDescription = null,
+                        tint = Success,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Ehliyet doğrulandı",
+                        fontSize = 16.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextPrimary,
+                    )
+                    Text(
+                        text = licenseClass,
+                        fontSize = 14.5.sp,
+                        color = TextSecondary,
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(SuccessLight)
+                        .padding(horizontal = 10.dp, vertical = 5.dp),
+                ) {
+                    Text(
+                        text = "Onaylı",
+                        fontSize = 14.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Success,
+                    )
+                }
+            }
+
+            if (showRefresh) {
+                HorizontalDivider(color = Background, thickness = 1.dp)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(enabled = !isRefreshing, onClick = onRefreshSessionClick)
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    if (isRefreshing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            color = Primary,
+                            strokeWidth = 2.dp,
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Outlined.Refresh,
+                            contentDescription = null,
+                            tint = Primary,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                    Text(
+                        text = "Oturumu yenile",
+                        fontSize = 14.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Primary,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LicenseStatusCard(
+    icon: ImageVector,
+    iconTint: Color,
+    iconBg: Color,
+    title: String,
+    subtitle: String,
+    badgeText: String,
+    badgeColor: Color,
+    badgeBg: Color,
+    onClick: (() -> Unit)? = null,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         color = Surface,
         tonalElevation = 0.dp,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Background),
+                    .background(iconBg),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.Shield,
+                    imageVector = icon,
                     contentDescription = null,
-                    tint = TextSecondary,
+                    tint = iconTint,
                     modifier = Modifier.size(22.dp),
                 )
             }
@@ -331,33 +515,83 @@ private fun LicensePendingCard(status: String, onClick: () -> Unit) {
                 )
                 Text(
                     text = subtitle,
+                    fontSize = 14.5.sp,
+                    color = TextSecondary,
+                    maxLines = 2,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                )
+            }
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(badgeBg)
+                    .padding(horizontal = 10.dp, vertical = 5.dp),
+            ) {
+                Text(
+                    text = badgeText,
+                    fontSize = 14.5.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = badgeColor,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReferralCard(onClick: () -> Unit) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(20.dp),
+        color = Surface,
+        tonalElevation = 0.dp,
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(PrimaryLight),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.CardGiftcard,
+                    contentDescription = null,
+                    tint = Primary,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Davet et · ₺50 kazan",
+                    fontSize = 16.5.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary,
+                )
+                Text(
+                    text = "Davet ettiğin arkadaş ilk yolculuğunu tamamlayınca ₺50 senin.",
                     fontSize = 13.5.sp,
                     color = TextSecondary,
                 )
             }
 
-            if (isUnderReview) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Background)
-                        .padding(horizontal = 10.dp, vertical = 5.dp),
-                ) {
-                    Text(
-                        text = "İnceleniyor",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = TextSecondary,
-                    )
-                }
-            } else {
-                Icon(
-                    imageVector = Icons.Outlined.ChevronRight,
-                    contentDescription = null,
-                    tint = BorderLight,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
+            Icon(
+                imageVector = Icons.Outlined.ChevronRight,
+                contentDescription = null,
+                tint = TextSecondary,
+            )
         }
     }
 }

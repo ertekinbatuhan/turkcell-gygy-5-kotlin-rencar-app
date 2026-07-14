@@ -19,27 +19,28 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.DirectionsCar
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.LockOpen
+import androidx.compose.material.icons.outlined.Remove
+import androidx.compose.material.icons.outlined.Timer
+import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Snackbar
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -54,7 +55,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import coil.compose.AsyncImage
+import com.flowbytestudio.rencar.data.vehicles.QuoteResponse
 import com.flowbytestudio.rencar.data.vehicles.VehicleDto
+import com.flowbytestudio.rencar.ui.common.formatTl
 import com.flowbytestudio.rencar.ui.screens.map.VehicleType
 import com.flowbytestudio.rencar.ui.theme.Background
 import com.flowbytestudio.rencar.ui.theme.BgLight
@@ -69,14 +72,13 @@ import com.flowbytestudio.rencar.ui.theme.Surface
 import com.flowbytestudio.rencar.ui.theme.TextPrimary
 import com.flowbytestudio.rencar.ui.theme.TextSecondary
 import java.util.Locale
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReservationScreen(
     vehicleId: String,
     onBack: () -> Unit,
+    onNavigateToHandover: (rentalId: String) -> Unit,
+    onNavigateToActiveRental: (rentalId: String) -> Unit,
 ) {
     val viewModel: ReservationViewModel = viewModel(
         factory = viewModelFactory {
@@ -84,16 +86,13 @@ fun ReservationScreen(
         },
     )
     val uiState by viewModel.uiState.collectAsState()
-    val scope = rememberCoroutineScope()
-    val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(uiState.reservationCompleted) {
-        if (uiState.reservationCompleted) {
-            val total = uiState.completedTotalPrice?.toInt()
-            snackbarHostState.showSnackbar("Rezervasyon tamamlandı! Toplam: ₺$total")
-            delay(1200)
-            onBack()
-        }
+    // Kilidi açılan yolculuk: dk/sa -> foto akışı, DAILY -> aktif kiralama.
+    LaunchedEffect(uiState.navigateToHandoverRentalId) {
+        uiState.navigateToHandoverRentalId?.let(onNavigateToHandover)
+    }
+    LaunchedEffect(uiState.navigateToActiveRentalId) {
+        uiState.navigateToActiveRentalId?.let(onNavigateToActiveRental)
     }
 
     Column(modifier = Modifier.fillMaxSize().background(Background)) {
@@ -107,7 +106,7 @@ fun ReservationScreen(
                 Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Geri", tint = TextPrimary)
             }
             Text(
-                text = "Rezervasyon Onayı",
+                text = if (uiState.isReservationActive) "Aktif Rezervasyon" else "Rezervasyon",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = TextPrimary,
@@ -116,7 +115,7 @@ fun ReservationScreen(
 
         Box(modifier = Modifier.fillMaxSize()) {
             when {
-                uiState.isLoadingVehicle -> {
+                uiState.isLoading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = Primary)
                     }
@@ -131,93 +130,148 @@ fun ReservationScreen(
                     ) {
                         Text(text = uiState.loadError.orEmpty(), color = Danger, fontSize = 14.sp)
                         Spacer(modifier = Modifier.height(12.dp))
-                        Button(onClick = viewModel::loadVehicle) {
+                        Button(
+                            onClick = viewModel::load,
+                            colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                        ) {
                             Text("Tekrar dene")
                         }
                     }
                 }
-                uiState.vehicle != null -> {
-                    val vehicle = uiState.vehicle!!
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .verticalScroll(rememberScrollState())
-                                .padding(horizontal = 20.dp),
-                        ) {
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            VehicleSummaryCard(vehicle = vehicle)
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            PlanSelector(
-                                selected = uiState.selectedPlan,
-                                pricePerMinute = vehicle.pricePerMinute,
-                                pricePerHour = vehicle.pricePerHour,
-                                pricePerDay = vehicle.pricePerDay,
-                                onSelect = viewModel::onPlanSelect,
-                            )
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            when (uiState.selectedPlan) {
-                                RentalPlan.DAKIKALIK -> MinutePlanCard(estimate = uiState.minuteEstimate)
-                                RentalPlan.SAATLIK -> HourPlanCard(pricePerHour = vehicle.pricePerHour)
-                                RentalPlan.GUNLUK -> PriceBreakdownCard(
-                                    pricePerDay = vehicle.pricePerDay,
-                                    days = uiState.days,
-                                    totalPrice = uiState.totalPrice,
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            Row(verticalAlignment = Alignment.Top) {
-                                Checkbox(
-                                    checked = uiState.termsAccepted,
-                                    onCheckedChange = viewModel::onTermsToggle,
-                                    colors = CheckboxDefaults.colors(checkedColor = Primary),
-                                )
-                                Text(
-                                    text = "Kullanım şartlarını ve kasko/sigorta koşullarını okudum, onaylıyorum.",
-                                    fontSize = 13.sp,
-                                    color = TextSecondary,
-                                    modifier = Modifier
-                                        .padding(top = 14.dp)
-                                        .clickable { viewModel.onTermsToggle(!uiState.termsAccepted) },
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(20.dp))
-                        }
-
-                        ReservationBottomBar(
-                            isSubmitting = uiState.isSubmitting,
-                            enabled = uiState.canSubmit,
-                            errorMessage = uiState.submitError,
-                            onSubmit = { viewModel.submit(onCompleted = {}) },
-                        )
-                    }
+                uiState.blockingReservationId != null -> {
+                    BlockingReservationNotice(
+                        vehicleLabel = uiState.blockingVehicleLabel,
+                        isCancelling = uiState.isCancellingBlocking,
+                        errorMessage = uiState.blockingError,
+                        onCancel = viewModel::cancelBlockingReservation,
+                    )
                 }
-            }
-
-            SnackbarHost(
-                hostState = snackbarHostState,
-                modifier = Modifier.align(Alignment.BottomCenter),
-            ) { data ->
-                Snackbar(snackbarData = data)
+                uiState.vehicle != null -> {
+                    ReservationContent(
+                        vehicle = uiState.vehicle!!,
+                        uiState = uiState,
+                        onPlanSelect = viewModel::onPlanSelect,
+                        onMinuteChange = viewModel::onMinuteEstimateChange,
+                        onHoursChange = viewModel::onHoursChange,
+                        onDaysChange = viewModel::onDaysChange,
+                        onRetryQuote = viewModel::refreshQuote,
+                        onTermsToggle = viewModel::onTermsToggle,
+                        onReserve = viewModel::reserve,
+                        onCancelReservation = viewModel::cancelReservation,
+                        onUnlock = viewModel::unlock,
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun ReservationBottomBar(
-    isSubmitting: Boolean,
+private fun ReservationContent(
+    vehicle: VehicleDto,
+    uiState: ReservationUiState,
+    onPlanSelect: (RentalPlan) -> Unit,
+    onMinuteChange: (Int) -> Unit,
+    onHoursChange: (Int) -> Unit,
+    onDaysChange: (Int) -> Unit,
+    onRetryQuote: () -> Unit,
+    onTermsToggle: (Boolean) -> Unit,
+    onReserve: () -> Unit,
+    onCancelReservation: () -> Unit,
+    onUnlock: () -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp),
+        ) {
+            Spacer(modifier = Modifier.height(8.dp))
+
+            VehicleSummaryCard(vehicle = vehicle)
+
+            if (uiState.isReservationActive) {
+                Spacer(modifier = Modifier.height(16.dp))
+                CountdownBanner(remainingSeconds = uiState.remainingSeconds)
+            } else if (uiState.notice != null) {
+                Spacer(modifier = Modifier.height(16.dp))
+                NoticeBanner(message = uiState.notice)
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            PlanSelector(
+                selected = uiState.selectedPlan,
+                pricePerMinute = vehicle.pricePerMinute,
+                pricePerHour = vehicle.pricePerHour,
+                pricePerDay = vehicle.pricePerDay,
+                onSelect = onPlanSelect,
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            PlanDetailsCard(
+                plan = uiState.selectedPlan,
+                minuteEstimate = uiState.minuteEstimate,
+                hours = uiState.hours,
+                days = uiState.days,
+                quote = uiState.quote,
+                isQuoteLoading = uiState.isQuoteLoading,
+                quoteError = uiState.quoteError,
+                onMinuteChange = onMinuteChange,
+                onHoursChange = onHoursChange,
+                onDaysChange = onDaysChange,
+                onRetryQuote = onRetryQuote,
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(verticalAlignment = Alignment.Top) {
+                Checkbox(
+                    checked = uiState.termsAccepted,
+                    onCheckedChange = onTermsToggle,
+                    colors = CheckboxDefaults.colors(checkedColor = Primary),
+                )
+                Text(
+                    text = "Kullanım şartlarını ve kasko/sigorta koşullarını okudum, onaylıyorum.",
+                    fontSize = 13.sp,
+                    color = TextSecondary,
+                    modifier = Modifier
+                        .padding(top = 14.dp)
+                        .clickable { onTermsToggle(!uiState.termsAccepted) },
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+        }
+
+        if (uiState.isReservationActive) {
+            ReservationActiveBottomBar(
+                canUnlock = uiState.canUnlock,
+                isUnlocking = uiState.isUnlocking,
+                isCancelling = uiState.isCancellingReservation,
+                errorMessage = uiState.actionError,
+                onUnlock = onUnlock,
+                onCancel = onCancelReservation,
+            )
+        } else {
+            SelectionBottomBar(
+                enabled = uiState.canReserve,
+                isReserving = uiState.isReserving,
+                errorMessage = uiState.reserveError,
+                onReserve = onReserve,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SelectionBottomBar(
     enabled: Boolean,
+    isReserving: Boolean,
     errorMessage: String?,
-    onSubmit: () -> Unit,
+    onReserve: () -> Unit,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -230,7 +284,7 @@ private fun ReservationBottomBar(
                 Spacer(modifier = Modifier.height(8.dp))
             }
             Button(
-                onClick = onSubmit,
+                onClick = onReserve,
                 enabled = enabled,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -238,15 +292,197 @@ private fun ReservationBottomBar(
                 shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Primary),
             ) {
-                if (isSubmitting) {
+                if (isReserving) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(22.dp),
                         color = Color.White,
                         strokeWidth = 2.dp,
                     )
                 } else {
-                    Text(text = "Rezervasyonu Tamamla", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        text = "Rezerve Et ($FREE_RESERVATION_MINUTES dk ücretsiz)",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReservationActiveBottomBar(
+    canUnlock: Boolean,
+    isUnlocking: Boolean,
+    isCancelling: Boolean,
+    errorMessage: String?,
+    onUnlock: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = Surface,
+        shadowElevation = 12.dp,
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp)) {
+            if (errorMessage != null) {
+                Text(text = errorMessage, color = Danger, fontSize = 13.sp)
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+            Button(
+                onClick = onUnlock,
+                enabled = canUnlock,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Primary),
+            ) {
+                if (isUnlocking) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(22.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp,
+                    )
+                } else {
+                    Icon(Icons.Outlined.LockOpen, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = "Kilidi Aç", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            TextButton(
+                onClick = onCancel,
+                enabled = !isCancelling && !isUnlocking,
+                modifier = Modifier.fillMaxWidth().height(46.dp),
+                colors = ButtonDefaults.textButtonColors(contentColor = Danger),
+            ) {
+                if (isCancelling) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = Danger,
+                        strokeWidth = 2.dp,
+                    )
+                } else {
+                    Text(text = "Rezervasyonu İptal Et", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CountdownBanner(remainingSeconds: Long) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = PrimaryLight,
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Outlined.Timer, contentDescription = null, tint = Primary, modifier = Modifier.size(22.dp))
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = "Rezervasyon süreniz",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = formatCountdown(remainingSeconds),
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Primary,
+                )
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "Bu süre dolmadan kilidi açın; aksi halde rezervasyon otomatik düşer.",
+                fontSize = 12.sp,
+                color = TextSecondary,
+            )
+        }
+    }
+}
+
+@Composable
+private fun NoticeBanner(message: String) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = BgLight,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Outlined.Info, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = message, fontSize = 13.sp, color = TextSecondary)
+        }
+    }
+}
+
+@Composable
+private fun BlockingReservationNotice(
+    vehicleLabel: String?,
+    isCancelling: Boolean,
+    errorMessage: String?,
+    onCancel: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Icon(
+            Icons.Outlined.WarningAmber,
+            contentDescription = null,
+            tint = Danger,
+            modifier = Modifier.size(48.dp),
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "Başka bir araçta aktif rezervasyonunuz var",
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = TextPrimary,
+        )
+        if (vehicleLabel != null) {
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(text = vehicleLabel, fontSize = 14.sp, color = TextSecondary)
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+        Text(
+            text = "Bu aracı rezerve edebilmek için önce mevcut rezervasyonunuzu iptal edin.",
+            fontSize = 14.sp,
+            color = TextSecondary,
+        )
+        if (errorMessage != null) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(text = errorMessage, color = Danger, fontSize = 13.sp)
+        }
+        Spacer(modifier = Modifier.height(20.dp))
+        Button(
+            onClick = onCancel,
+            enabled = !isCancelling,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            shape = RoundedCornerShape(14.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Danger),
+        ) {
+            if (isCancelling) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(22.dp),
+                    color = Color.White,
+                    strokeWidth = 2.dp,
+                )
+            } else {
+                Text(text = "Rezervasyonu İptal Et", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
         }
     }
@@ -257,6 +493,7 @@ private fun VehicleSummaryCard(vehicle: VehicleDto) {
     val typeColor = VehicleType.colorFor(vehicle.type)
     val (statusLabel, statusColor, statusBg) = when (vehicle.status.uppercase()) {
         "AVAILABLE" -> Triple("Müsait", Success, SuccessLight)
+        "RESERVED" -> Triple("Rezerve", Primary, PrimaryLight)
         "RENTED" -> Triple("Kirada", Danger, DangerLight)
         "MAINTENANCE" -> Triple("Bakımda", TextSecondary, BgLight)
         else -> Triple(vehicle.status, TextSecondary, BgLight)
@@ -264,7 +501,8 @@ private fun VehicleSummaryCard(vehicle: VehicleDto) {
     val subtitle = listOfNotNull(
         vehicle.plate,
         vehicle.transmission ?: VehicleType.labelFor(vehicle.type),
-        vehicle.seatCount?.let { "$it kişi" },
+        vehicle.seats?.let { "$it kişi" },
+        segmentLabel(vehicle.segment),
     ).joinToString(" · ")
 
     Surface(
@@ -425,58 +663,18 @@ private fun PlanChip(
 }
 
 @Composable
-private fun MinutePlanCard(estimate: Double?) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = Surface,
-        shadowElevation = 2.dp,
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            PriceRow(label = "Ücretsiz rezervasyon", value = "$FREE_RESERVATION_MINUTES dk")
-            Spacer(modifier = Modifier.height(8.dp))
-            PriceRow(label = "Başlangıç ücreti", value = "₺${formatTl(MINUTE_PLAN_START_FEE)}")
-            Spacer(modifier = Modifier.height(10.dp))
-            HorizontalDivider(color = Background, thickness = 1.dp)
-            Spacer(modifier = Modifier.height(10.dp))
-            PriceRow(
-                label = "Tahmini ücret ($MINUTE_ESTIMATE_MINUTES dk)",
-                value = estimate?.let { "~₺${formatTl(it)}" } ?: "—",
-                emphasize = true,
-            )
-        }
-    }
-}
-
-@Composable
-private fun HourPlanCard(pricePerHour: Double?) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = Surface,
-        shadowElevation = 2.dp,
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            PriceRow(label = "Ücretsiz rezervasyon", value = "$FREE_RESERVATION_MINUTES dk")
-            Spacer(modifier = Modifier.height(8.dp))
-            PriceRow(label = "Saatlik ücret", value = pricePerHour?.let { "₺${formatTl(it)}" } ?: "—")
-            Spacer(modifier = Modifier.height(10.dp))
-            HorizontalDivider(color = Background, thickness = 1.dp)
-            Spacer(modifier = Modifier.height(10.dp))
-            PriceRow(
-                label = "Tahmini ücret (1 sa)",
-                value = pricePerHour?.let { "~₺${formatTl(it)}" } ?: "—",
-                emphasize = true,
-            )
-        }
-    }
-}
-
-@Composable
-private fun PriceBreakdownCard(
-    pricePerDay: Double,
+private fun PlanDetailsCard(
+    plan: RentalPlan,
+    minuteEstimate: Int,
+    hours: Int,
     days: Int,
-    totalPrice: Double,
+    quote: QuoteResponse?,
+    isQuoteLoading: Boolean,
+    quoteError: String?,
+    onMinuteChange: (Int) -> Unit,
+    onHoursChange: (Int) -> Unit,
+    onDaysChange: (Int) -> Unit,
+    onRetryQuote: () -> Unit,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -485,28 +683,151 @@ private fun PriceBreakdownCard(
         shadowElevation = 2.dp,
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            PriceRow(label = "Günlük ücret", value = "₺${pricePerDay.toInt()}")
-            Spacer(modifier = Modifier.height(8.dp))
-            PriceRow(label = "Süre", value = if (days == 1) "1 gün" else "$days gün")
-            Spacer(modifier = Modifier.height(10.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = if (plan == RentalPlan.DAKIKALIK) "Tahmini süre" else "Süre",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary,
+                )
+                when (plan) {
+                    RentalPlan.DAKIKALIK -> DurationStepper(
+                        valueText = "$minuteEstimate dk",
+                        onDecrement = { onMinuteChange(minuteEstimate - MINUTE_ESTIMATE_STEP) },
+                        onIncrement = { onMinuteChange(minuteEstimate + MINUTE_ESTIMATE_STEP) },
+                        decrementEnabled = minuteEstimate > MINUTE_ESTIMATE_MIN,
+                        incrementEnabled = minuteEstimate < MINUTE_ESTIMATE_MAX,
+                    )
+                    RentalPlan.SAATLIK -> DurationStepper(
+                        valueText = if (hours == 1) "1 saat" else "$hours saat",
+                        onDecrement = { onHoursChange(hours - 1) },
+                        onIncrement = { onHoursChange(hours + 1) },
+                        decrementEnabled = hours > HOURS_MIN,
+                        incrementEnabled = hours < HOURS_MAX,
+                    )
+                    RentalPlan.GUNLUK -> DurationStepper(
+                        valueText = if (days == 1) "1 gün" else "$days gün",
+                        onDecrement = { onDaysChange(days - 1) },
+                        onIncrement = { onDaysChange(days + 1) },
+                        decrementEnabled = days > DAYS_MIN,
+                        incrementEnabled = days < DAYS_MAX,
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
             HorizontalDivider(color = Background, thickness = 1.dp)
-            Spacer(modifier = Modifier.height(10.dp))
-            PriceRow(
-                label = "Toplam tutar",
-                value = "₺${totalPrice.toInt()}",
-                emphasize = true,
-            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            when {
+                quote != null -> {
+                    PriceRow(label = "Kullanım ücreti", value = "₺${formatTl(quote.usageFee)}")
+                    if (quote.startFee != 0.0) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        PriceRow(label = "Açılış ücreti", value = "₺${formatTl(quote.startFee)}")
+                    }
+                    if (quote.serviceFee != 0.0) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        PriceRow(label = "Servis ücreti", value = "₺${formatTl(quote.serviceFee)}")
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    HorizontalDivider(color = Background, thickness = 1.dp)
+                    Spacer(modifier = Modifier.height(10.dp))
+                    PriceRow(
+                        label = "Tahmini ücret",
+                        value = "~₺${formatTl(quote.estimatedTotal)}",
+                        emphasize = true,
+                    )
+                    if (isQuoteLoading) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(text = "Güncelleniyor…", fontSize = 12.sp, color = TextSecondary)
+                    }
+                }
+                isQuoteLoading -> {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Primary, strokeWidth = 2.dp)
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(text = "Tahmini ücret hesaplanıyor…", fontSize = 13.sp, color = TextSecondary)
+                    }
+                }
+                quoteError == null -> {
+                    // Rezervasyon aktifken quote çekilmez; ücret kullanıma göre sonda oluşur.
+                    Text(
+                        text = "Ücret, kullanımına göre yolculuk sonunda hesaplanır.",
+                        fontSize = 13.sp,
+                        color = TextSecondary,
+                    )
+                }
+                else -> {
+                    Text(
+                        text = quoteError,
+                        fontSize = 13.sp,
+                        color = Danger,
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    TextButton(
+                        onClick = onRetryQuote,
+                        colors = ButtonDefaults.textButtonColors(contentColor = Primary),
+                    ) {
+                        Text(text = "Tekrar dene", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
         }
     }
 }
 
-/** ₺1.450 gibi tam sayıları binlik ayraçlı, ₺4,50 gibi değerleri virgüllü iki basamakla yazar. */
-private fun formatTl(value: Double): String {
-    val turkish = Locale("tr", "TR")
-    return if (value % 1.0 == 0.0) {
-        String.format(turkish, "%,d", value.toLong())
-    } else {
-        String.format(turkish, "%,.2f", value)
+@Composable
+private fun DurationStepper(
+    valueText: String,
+    onDecrement: () -> Unit,
+    onIncrement: () -> Unit,
+    decrementEnabled: Boolean,
+    incrementEnabled: Boolean,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        StepperButton(icon = Icons.Outlined.Remove, enabled = decrementEnabled, onClick = onDecrement)
+        Text(
+            text = valueText,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = TextPrimary,
+            modifier = Modifier.width(64.dp),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        )
+        StepperButton(icon = Icons.Outlined.Add, enabled = incrementEnabled, onClick = onIncrement)
+    }
+}
+
+@Composable
+private fun StepperButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    val shape = RoundedCornerShape(10.dp)
+    Box(
+        modifier = Modifier
+            .size(34.dp)
+            .clip(shape)
+            .border(width = 1.dp, color = BorderLight, shape = shape)
+            .background(Surface)
+            .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier.alpha(0.4f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = if (enabled) Primary else TextSecondary,
+            modifier = Modifier.size(18.dp),
+        )
     }
 }
 
@@ -526,4 +847,20 @@ private fun PriceRow(label: String, value: String, emphasize: Boolean = false) {
             color = if (emphasize) Primary else TextPrimary,
         )
     }
+}
+
+// Fiyat segmenti etiketi (karoseri tipi değil).
+private fun segmentLabel(segment: String?): String? = when (segment?.uppercase()) {
+    "ECONOMY" -> "Ekonomik"
+    "COMFORT" -> "Konfor"
+    "SUV" -> "SUV"
+    else -> null
+}
+
+// remainingSeconds -> mm:ss
+private fun formatCountdown(totalSeconds: Long): String {
+    val safe = totalSeconds.coerceAtLeast(0)
+    val minutes = safe / 60
+    val seconds = safe % 60
+    return String.format(Locale.US, "%02d:%02d", minutes, seconds)
 }

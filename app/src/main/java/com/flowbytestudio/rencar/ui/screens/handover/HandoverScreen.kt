@@ -18,9 +18,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.outlined.DirectionsCar
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.WarningAmber
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -28,6 +28,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -40,12 +41,15 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import coil.compose.AsyncImage
+import com.flowbytestudio.rencar.ui.common.rememberCameraCapture
 import com.flowbytestudio.rencar.ui.theme.Background
 import com.flowbytestudio.rencar.ui.theme.BgLight
 import com.flowbytestudio.rencar.ui.theme.BorderLight
@@ -62,13 +66,14 @@ private val WarningAmber = Color(0xFFF59E0B)
 
 @Composable
 fun HandoverScreen(
-    vehicleId: String,
+    rentalId: String,
     onBack: () -> Unit,
+    onCancelled: () -> Unit,
     onRentalStarted: (rentalId: String) -> Unit,
 ) {
     val viewModel: HandoverViewModel = viewModel(
         factory = viewModelFactory {
-            initializer { HandoverViewModel(vehicleId) }
+            initializer { HandoverViewModel(rentalId) }
         },
     )
     val uiState by viewModel.uiState.collectAsState()
@@ -76,12 +81,22 @@ fun HandoverScreen(
     LaunchedEffect(uiState.startedRentalId) {
         uiState.startedRentalId?.let(onRentalStarted)
     }
+    LaunchedEffect(uiState.cancelled) {
+        if (uiState.cancelled) onCancelled()
+    }
+
+    // Her yön için ayrı kamera başlatıcısı; ham kare ViewModel'e verilir,
+    // küçültme arka planda (Dispatchers.IO) yapılır — ana thread bloklanmaz.
+    val cameraFront = rememberCameraCapture { file -> viewModel.onPhotoCaptured(PhotoSide.ON, file) }
+    val cameraBack = rememberCameraCapture { file -> viewModel.onPhotoCaptured(PhotoSide.ARKA, file) }
+    val cameraLeft = rememberCameraCapture { file -> viewModel.onPhotoCaptured(PhotoSide.SOL, file) }
+    val cameraRight = rememberCameraCapture { file -> viewModel.onPhotoCaptured(PhotoSide.SAG, file) }
 
     Column(modifier = Modifier.fillMaxSize().background(Background)) {
         HandoverHeader(onBack = onBack)
 
         when {
-            uiState.isLoadingVehicle -> {
+            uiState.isLoading -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = Primary)
                 }
@@ -94,7 +109,7 @@ fun HandoverScreen(
                 ) {
                     Text(text = uiState.loadError.orEmpty(), color = Danger, fontSize = 14.sp)
                     Spacer(modifier = Modifier.height(12.dp))
-                    Button(onClick = viewModel::loadVehicle) {
+                    Button(onClick = viewModel::load) {
                         Text("Tekrar dene")
                     }
                 }
@@ -111,7 +126,7 @@ fun HandoverScreen(
                             modifier = Modifier.weight(1f),
                         )
                         Text(
-                            text = "${uiState.capturedCount} / ${PhotoSide.entries.size} çekildi",
+                            text = "${uiState.uploadedCount} / ${PhotoSide.entries.size} çekildi",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = Primary,
@@ -120,23 +135,23 @@ fun HandoverScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    val nextSide = PhotoSide.entries.firstOrNull { it !in uiState.capturedSides }
+                    val nextSide = PhotoSide.entries.firstOrNull { it !in uiState.photos.keys }
 
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         PhotoSlot(
                             side = PhotoSide.ON,
-                            captured = PhotoSide.ON in uiState.capturedSides,
+                            imageUrl = uiState.photos[PhotoSide.ON],
+                            uploading = PhotoSide.ON in uiState.uploadingSides,
                             highlighted = nextSide == PhotoSide.ON,
-                            onClick = viewModel::onCapture,
-                            onRetake = viewModel::onRetake,
+                            onCapture = cameraFront::capture,
                             modifier = Modifier.weight(1f),
                         )
                         PhotoSlot(
                             side = PhotoSide.ARKA,
-                            captured = PhotoSide.ARKA in uiState.capturedSides,
+                            imageUrl = uiState.photos[PhotoSide.ARKA],
+                            uploading = PhotoSide.ARKA in uiState.uploadingSides,
                             highlighted = nextSide == PhotoSide.ARKA,
-                            onClick = viewModel::onCapture,
-                            onRetake = viewModel::onRetake,
+                            onCapture = cameraBack::capture,
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -146,32 +161,73 @@ fun HandoverScreen(
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         PhotoSlot(
                             side = PhotoSide.SOL,
-                            captured = PhotoSide.SOL in uiState.capturedSides,
+                            imageUrl = uiState.photos[PhotoSide.SOL],
+                            uploading = PhotoSide.SOL in uiState.uploadingSides,
                             highlighted = nextSide == PhotoSide.SOL,
-                            onClick = viewModel::onCapture,
-                            onRetake = viewModel::onRetake,
+                            onCapture = cameraLeft::capture,
                             modifier = Modifier.weight(1f),
                         )
                         PhotoSlot(
                             side = PhotoSide.SAG,
-                            captured = PhotoSide.SAG in uiState.capturedSides,
+                            imageUrl = uiState.photos[PhotoSide.SAG],
+                            uploading = PhotoSide.SAG in uiState.uploadingSides,
                             highlighted = nextSide == PhotoSide.SAG,
-                            onClick = viewModel::onCapture,
-                            onRetake = viewModel::onRetake,
+                            onCapture = cameraRight::capture,
                             modifier = Modifier.weight(1f),
                         )
+                    }
+
+                    if (uiState.uploadError != null) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(text = uiState.uploadError.orEmpty(), color = Danger, fontSize = 13.sp)
                     }
                 }
 
                 HandoverBottomBar(
-                    remainingCount = uiState.remainingCount,
                     isStarting = uiState.isStarting,
-                    enabled = uiState.canStart,
-                    errorMessage = uiState.startError,
+                    canStart = uiState.canStart,
+                    startError = uiState.startError,
+                    cancelError = uiState.cancelError,
                     onStart = viewModel::startRental,
+                    onCancel = viewModel::onCancelClicked,
                 )
             }
         }
+    }
+
+    if (uiState.showCancelDialog) {
+        AlertDialog(
+            onDismissRequest = viewModel::onDismissCancelDialog,
+            containerColor = Surface,
+            title = {
+                Text(text = "Yolculuğu iptal et?", fontWeight = FontWeight.Bold, color = TextPrimary)
+            },
+            text = {
+                Text(
+                    text = "Hazırlıktaki yolculuk iptal edilecek ve araç tekrar müsait olacak.",
+                    color = TextSecondary,
+                    fontSize = 14.sp,
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = viewModel::confirmCancel, enabled = !uiState.isCancelling) {
+                    if (uiState.isCancelling) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            color = Danger,
+                            strokeWidth = 2.dp,
+                        )
+                    } else {
+                        Text(text = "İptal Et", color = Danger, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::onDismissCancelDialog, enabled = !uiState.isCancelling) {
+                    Text(text = "Vazgeç", color = TextSecondary)
+                }
+            },
+        )
     }
 }
 
@@ -208,12 +264,13 @@ private fun HandoverHeader(onBack: () -> Unit) {
 @Composable
 private fun PhotoSlot(
     side: PhotoSide,
-    captured: Boolean,
+    imageUrl: String?,
+    uploading: Boolean,
     highlighted: Boolean,
-    onClick: (PhotoSide) -> Unit,
-    onRetake: (PhotoSide) -> Unit,
+    onCapture: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val captured = imageUrl != null
     val shape = RoundedCornerShape(16.dp)
     val borderColor = BorderLight
 
@@ -223,24 +280,33 @@ private fun PhotoSlot(
             .clip(shape)
             .background(if (captured) SuccessLight else Surface)
             .then(
-                if (captured) {
-                    Modifier.clickable { onRetake(side) }
-                } else {
+                if (captured || uploading) {
                     Modifier
-                        .drawBehind {
-                            drawRoundRect(
-                                color = borderColor,
-                                style = Stroke(
-                                    width = 1.5.dp.toPx(),
-                                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(14f, 12f)),
-                                ),
-                                cornerRadius = CornerRadius(16.dp.toPx()),
-                            )
-                        }
-                        .clickable { onClick(side) }
+                } else {
+                    Modifier.drawBehind {
+                        drawRoundRect(
+                            color = borderColor,
+                            style = Stroke(
+                                width = 1.5.dp.toPx(),
+                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(14f, 12f)),
+                            ),
+                            cornerRadius = CornerRadius(16.dp.toPx()),
+                        )
+                    }
                 },
-            ),
+            )
+            .clickable(enabled = !uploading) { onCapture() },
     ) {
+        // Yüklü fotoğrafı Coil ile göster; üzerine etiket/rozet biner.
+        if (captured) {
+            AsyncImage(
+                model = imageUrl,
+                contentDescription = "${side.label} fotoğrafı",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize().clip(shape),
+            )
+        }
+
         // Sol üst köşe yön etiketi
         Box(
             modifier = Modifier
@@ -258,51 +324,61 @@ private fun PhotoSlot(
             )
         }
 
-        if (captured) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(10.dp)
-                    .size(22.dp)
-                    .clip(CircleShape)
-                    .background(Success),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Check,
-                    contentDescription = "${side.label} çekildi",
-                    tint = Color.White,
-                    modifier = Modifier.size(14.dp),
-                )
-            }
-            // Foto upload endpoint'i gelene kadar çekilen kare yerine araç silueti gösteriliyor.
-            Icon(
-                imageVector = Icons.Outlined.DirectionsCar,
-                contentDescription = null,
-                tint = Success.copy(alpha = 0.45f),
-                modifier = Modifier.align(Alignment.Center).size(56.dp),
-            )
-        } else {
-            Column(
-                modifier = Modifier.align(Alignment.Center),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
+        when {
+            uploading -> {
                 Box(
                     modifier = Modifier
-                        .size(44.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(if (highlighted) Primary else PrimaryLight),
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.25f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(28.dp),
+                        color = Color.White,
+                        strokeWidth = 2.5.dp,
+                    )
+                }
+            }
+            captured -> {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(10.dp)
+                        .size(22.dp)
+                        .clip(CircleShape)
+                        .background(Success),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.PhotoCamera,
-                        contentDescription = "${side.label} fotoğrafı çek",
-                        tint = if (highlighted) Color.White else Primary,
-                        modifier = Modifier.size(22.dp),
+                        imageVector = Icons.Filled.Check,
+                        contentDescription = "${side.label} çekildi",
+                        tint = Color.White,
+                        modifier = Modifier.size(14.dp),
                     )
                 }
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(text = "Fotoğraf çek", fontSize = 12.sp, color = TextSecondary)
+            }
+            else -> {
+                Column(
+                    modifier = Modifier.align(Alignment.Center),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(if (highlighted) Primary else PrimaryLight),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.PhotoCamera,
+                            contentDescription = "${side.label} fotoğrafı çek",
+                            tint = if (highlighted) Color.White else Primary,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(text = "Fotoğraf çek", fontSize = 12.sp, color = TextSecondary)
+                }
             }
         }
     }
@@ -310,11 +386,12 @@ private fun PhotoSlot(
 
 @Composable
 private fun HandoverBottomBar(
-    remainingCount: Int,
     isStarting: Boolean,
-    enabled: Boolean,
-    errorMessage: String?,
+    canStart: Boolean,
+    startError: String?,
+    cancelError: String?,
     onStart: () -> Unit,
+    onCancel: () -> Unit,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -337,16 +414,20 @@ private fun HandoverBottomBar(
                 )
             }
 
-            if (errorMessage != null) {
+            if (startError != null) {
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(text = errorMessage, color = Danger, fontSize = 13.sp)
+                Text(text = startError, color = Danger, fontSize = 13.sp)
+            }
+            if (cancelError != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(text = cancelError, color = Danger, fontSize = 13.sp)
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
             Button(
                 onClick = onStart,
-                enabled = enabled,
+                enabled = canStart,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp),
@@ -361,15 +442,29 @@ private fun HandoverBottomBar(
                     )
                 } else {
                     Text(
-                        text = if (remainingCount > 0) {
-                            "Kiralamayı Başlat · $remainingCount foto kaldı"
-                        } else {
-                            "Kiralamayı Başlat"
-                        },
+                        text = "Yolculuğu Başlat",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            TextButton(
+                onClick = onCancel,
+                enabled = !isStarting,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                shape = RoundedCornerShape(14.dp),
+            ) {
+                Text(
+                    text = "Yolculuğu İptal Et",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Danger,
+                )
             }
         }
     }

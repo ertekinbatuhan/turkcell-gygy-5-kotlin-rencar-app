@@ -35,8 +35,9 @@ data object ReferralRoute
 @Serializable
 data class ReservationRoute(val vehicleId: String)
 
+// v2'de foto akışı PREPARING durumundaki kiralamaya bağlıdır; ekran rentalId alır.
 @Serializable
-data class HandoverRoute(val vehicleId: String)
+data class HandoverRoute(val rentalId: String)
 
 @Serializable
 data class ActiveRentalRoute(val rentalId: String)

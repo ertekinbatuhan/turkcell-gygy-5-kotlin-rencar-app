@@ -42,6 +42,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -50,6 +51,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.flowbytestudio.rencar.ui.common.formatTl
 import com.flowbytestudio.rencar.ui.theme.Background
 import com.flowbytestudio.rencar.ui.theme.BgLight
 import com.flowbytestudio.rencar.ui.theme.Danger
@@ -61,7 +63,6 @@ import com.flowbytestudio.rencar.ui.theme.TextSecondary
 import java.util.Locale
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
-import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
@@ -112,8 +113,9 @@ fun ActiveRentalScreen(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(uiState.endedTotalPrice) {
-        if (uiState.endedTotalPrice != null) onEnded()
+    // finish başarılı / 404 (başka yerden bitmiş) / baştan COMPLETED → TripSummary'ye devret.
+    LaunchedEffect(uiState.ended) {
+        if (uiState.ended) onEnded()
     }
 
     var mapView by remember { mutableStateOf<MapView?>(null) }
@@ -175,23 +177,33 @@ fun ActiveRentalScreen(
             }
         }
 
-        LaunchedEffect(mapLibreMap, mapStyle, uiState.vehicle) {
+        // İlk konumda 15x yakınlaşılır; sonraki canlı güncellemelerde yalnız marker
+        // taşınıp kamera yumuşakça takip eder (her karede yeniden zoom yapılmaz).
+        var hasInitialFix by remember { mutableStateOf(false) }
+        // Canlı soket konumu varsa onu, yoksa REST'ten gelen araç konumunu kullan.
+        val markerLat = uiState.livePosition?.latitude ?: uiState.vehicle?.latitude
+        val markerLng = uiState.livePosition?.longitude ?: uiState.vehicle?.longitude
+        LaunchedEffect(mapLibreMap, mapStyle, markerLat, markerLng) {
             val map = mapLibreMap ?: return@LaunchedEffect
             val style = mapStyle ?: return@LaunchedEffect
-            val vehicle = uiState.vehicle ?: return@LaunchedEffect
+            val lat = markerLat ?: return@LaunchedEffect
+            val lng = markerLng ?: return@LaunchedEffect
             style.getSourceAs<GeoJsonSource>(VEHICLE_SOURCE_ID)
-                ?.setGeoJson(Point.fromLngLat(vehicle.longitude, vehicle.latitude))
-            map.cameraPosition = CameraPosition.Builder()
-                .target(LatLng(vehicle.latitude, vehicle.longitude))
-                .zoom(15.0)
-                .build()
-            map.animateCamera(
-                CameraUpdateFactory.newLatLngZoom(LatLng(vehicle.latitude, vehicle.longitude), 15.0),
-            )
+                ?.setGeoJson(Point.fromLngLat(lng, lat))
+            if (!hasInitialFix) {
+                hasInitialFix = true
+                map.animateCamera(
+                    CameraUpdateFactory.newLatLngZoom(LatLng(lat, lng), 15.0),
+                )
+            } else {
+                map.easeCamera(CameraUpdateFactory.newLatLng(LatLng(lat, lng)))
+            }
         }
 
         ActiveRentalPill(
-            vehicleName = uiState.vehicle?.let { "${it.brand} ${it.model}" },
+            // Araç bilgisi rental.vehicle özetinden gelir (ayrı VehicleDto yalnız harita içindir).
+            vehicleName = uiState.rental?.vehicle?.let { "${it.brand} ${it.model}" }
+                ?: uiState.vehicle?.let { "${it.brand} ${it.model}" },
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .statusBarsPadding()
@@ -282,6 +294,18 @@ private fun ActiveRentalCard(
 
             Spacer(modifier = Modifier.height(14.dp))
 
+            if (uiState.isPreparing) {
+                // PREPARING: süre işlemiyor; foto akışı tamamlanıp start çağrılmalı.
+                Text(
+                    text = "Yolculuk henüz başlamadı. Araç fotoğraflarını tamamlayıp başlat; " +
+                        "süre başlayınca burada işleyecek.",
+                    fontSize = 13.sp,
+                    color = TextSecondary,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(modifier = Modifier.height(14.dp))
+            }
+
             Text(text = "Geçen süre", fontSize = 13.sp, color = TextSecondary)
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -302,18 +326,25 @@ private fun ActiveRentalCard(
                     valueColor = Primary,
                     modifier = Modifier.weight(1f),
                 )
-                // Araç telemetrisi (km) API'de olmadığı için veri gelene kadar "—".
+                // GET /rentals/active — sunucunun biriktirdiği mesafe (km).
                 StatTile(
                     label = "Mesafe",
-                    value = "—",
+                    value = uiState.distanceKm?.let { formatKm(it) } ?: "—",
                     valueColor = TextPrimary,
                     modifier = Modifier.weight(1f),
                 )
             }
 
-            if (uiState.endError != null) {
+            val fatalError = uiState.endError ?: uiState.loadError
+            if (fatalError != null) {
                 Spacer(modifier = Modifier.height(10.dp))
-                Text(text = uiState.endError, color = Danger, fontSize = 13.sp)
+                Text(text = fatalError, color = Danger, fontSize = 13.sp)
+            }
+
+            // Yoklama sırasında oluşan geçici (ölümcül olmayan) bağlantı hatası; ince göster.
+            if (uiState.pollError != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(text = uiState.pollError, color = TextSecondary, fontSize = 12.sp)
             }
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -383,14 +414,12 @@ private fun formatElapsed(totalSeconds: Long): String {
     val hours = totalSeconds / 3600
     val minutes = (totalSeconds % 3600) / 60
     val seconds = totalSeconds % 60
-    return String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
-}
-
-private fun formatTl(value: Double): String {
-    val turkish = Locale("tr", "TR")
-    return if (value % 1.0 == 0.0) {
-        String.format(turkish, "%,d", value.toLong())
+    return if (hours > 0) {
+        String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
     } else {
-        String.format(turkish, "%,.2f", value)
+        String.format(Locale.US, "%02d:%02d", minutes, seconds)
     }
 }
+
+private fun formatKm(km: Double): String =
+    String.format(Locale("tr", "TR"), "%,.1f km", km)

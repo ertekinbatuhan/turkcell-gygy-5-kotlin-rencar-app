@@ -1,29 +1,41 @@
 package com.flowbytestudio.rencar.ui.screens.handover
 
-import com.flowbytestudio.rencar.data.vehicles.VehicleDto
+import com.flowbytestudio.rencar.data.rentals.RentalVehicleSummary
 
-enum class PhotoSide(val label: String) {
-    ON("Ön"),
-    ARKA("Arka"),
-    SOL("Sol"),
-    SAG("Sağ"),
+// UI etiketi Türkçe, API yönü İngilizce: ON=FRONT, ARKA=BACK, SOL=LEFT, SAG=RIGHT.
+enum class PhotoSide(val label: String, val apiSide: String) {
+    ON("Ön", "FRONT"),
+    ARKA("Arka", "BACK"),
+    SOL("Sol", "LEFT"),
+    SAG("Sağ", "RIGHT");
+
+    companion object {
+        fun fromApi(apiSide: String): PhotoSide? = entries.firstOrNull { it.apiSide == apiSide }
+    }
 }
 
 data class HandoverUiState(
-    val isLoadingVehicle: Boolean = true,
-    val vehicle: VehicleDto? = null,
+    val isLoading: Boolean = true,
     val loadError: String? = null,
-    val capturedSides: Set<PhotoSide> = emptySet(),
+    val vehicle: RentalVehicleSummary? = null,
+    // Yön -> sunucuda yüklü fotoğrafın URL'i (Coil ile gösterilir).
+    val photos: Map<PhotoSide, String> = emptyMap(),
+    val uploadedCount: Int = 0,
+    val photosComplete: Boolean = false,
+    // Şu an yükleniyor olan yönler (slot üzerinde spinner).
+    val uploadingSides: Set<PhotoSide> = emptySet(),
+    val uploadError: String? = null,
     val isStarting: Boolean = false,
     val startError: String? = null,
     val startedRentalId: String? = null,
+    val showCancelDialog: Boolean = false,
+    val isCancelling: Boolean = false,
+    val cancelError: String? = null,
+    val cancelled: Boolean = false,
 ) {
-    val capturedCount: Int
-        get() = capturedSides.size
-
     val remainingCount: Int
-        get() = PhotoSide.entries.size - capturedCount
+        get() = PhotoSide.entries.size - uploadedCount
 
     val canStart: Boolean
-        get() = vehicle != null && remainingCount == 0 && !isStarting
+        get() = photosComplete && !isStarting && !isCancelling && uploadingSides.isEmpty()
 }

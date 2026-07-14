@@ -2,9 +2,12 @@ package com.flowbytestudio.rencar.data.network
 
 import com.flowbytestudio.rencar.data.auth.AuthApi
 import com.flowbytestudio.rencar.data.auth.AuthSession
+import com.flowbytestudio.rencar.data.cards.CardApi
 import com.flowbytestudio.rencar.data.license.LicenseApi
 import com.flowbytestudio.rencar.data.rentals.RentalApi
+import com.flowbytestudio.rencar.data.reservations.ReservationApi
 import com.flowbytestudio.rencar.data.vehicles.VehicleApi
+import com.flowbytestudio.rencar.data.wallet.WalletApi
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -15,6 +18,9 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
 object NetworkModule {
 
     private const val BASE_URL = "https://rencarv2.halitkalayci.com/"
+
+    // Socket.IO canlı konum namespace'i (aktif kiralamadaki araç için).
+    const val WS_LOCATIONS_URL = "https://rencarv2.halitkalayci.com/ws/locations"
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -52,4 +58,7 @@ object NetworkModule {
     val vehicleApi: VehicleApi by lazy { retrofit.create(VehicleApi::class.java) }
     val rentalApi: RentalApi by lazy { retrofit.create(RentalApi::class.java) }
     val licenseApi: LicenseApi by lazy { retrofit.create(LicenseApi::class.java) }
+    val reservationApi: ReservationApi by lazy { retrofit.create(ReservationApi::class.java) }
+    val walletApi: WalletApi by lazy { retrofit.create(WalletApi::class.java) }
+    val cardApi: CardApi by lazy { retrofit.create(CardApi::class.java) }
 }

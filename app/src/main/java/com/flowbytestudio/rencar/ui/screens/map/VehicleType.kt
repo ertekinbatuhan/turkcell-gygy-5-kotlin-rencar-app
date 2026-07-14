@@ -17,3 +17,17 @@ enum class VehicleType(val apiValue: String, val label: String, val color: Color
         fun labelFor(apiValue: String): String = fromApiValue(apiValue)?.label ?: apiValue
     }
 }
+
+// Fiyat segmenti (ECONOMY/COMFORT/SUV) — karoseri tipinden (VehicleType) BAĞIMSIZDIR.
+// Haritadaki Tümü/Ekonomik/Konfor/SUV sekmeleri (sunucu ?segment paramı) ve araç
+// kartındaki segment rozeti bunu kullanır.
+enum class VehicleSegment(val apiValue: String, val label: String) {
+    ECONOMY("ECONOMY", "Ekonomik"),
+    COMFORT("COMFORT", "Konfor"),
+    SUV("SUV", "SUV");
+
+    companion object {
+        fun labelFor(apiValue: String?): String? =
+            apiValue?.let { value -> entries.find { it.apiValue == value }?.label }
+    }
+}

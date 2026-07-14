@@ -17,7 +17,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AirlineSeatReclineNormal
 import androidx.compose.material.icons.outlined.DirectionsCar
 import androidx.compose.material.icons.outlined.LocalGasStation
-import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.NearMe
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
@@ -25,7 +24,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,17 +39,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.flowbytestudio.rencar.data.vehicles.VehicleDto
+import com.flowbytestudio.rencar.ui.common.formatTl
 import com.flowbytestudio.rencar.ui.theme.BgLight
 import com.flowbytestudio.rencar.ui.theme.BorderLight
 import com.flowbytestudio.rencar.ui.theme.Danger
 import com.flowbytestudio.rencar.ui.theme.DangerLight
 import com.flowbytestudio.rencar.ui.theme.Primary
+import com.flowbytestudio.rencar.ui.theme.PrimaryLight
 import com.flowbytestudio.rencar.ui.theme.Success
 import com.flowbytestudio.rencar.ui.theme.SuccessLight
 import com.flowbytestudio.rencar.ui.theme.Surface
 import com.flowbytestudio.rencar.ui.theme.TextPrimary
 import com.flowbytestudio.rencar.ui.theme.TextSecondary
-import java.util.Locale
 
 private const val MINUTES_PER_DAY = 1440.0
 private const val HOURS_PER_DAY = 24.0
@@ -62,19 +61,20 @@ fun VehicleDetailSheet(
     vehicle: VehicleDto,
     distanceLabel: String?,
     canReserve: Boolean,
-    canUnlock: Boolean,
     sheetState: SheetState,
     onDismiss: () -> Unit,
     onReserve: () -> Unit,
-    onUnlock: () -> Unit,
 ) {
     val typeColor = VehicleType.colorFor(vehicle.type)
+    val isAvailable = vehicle.status.equals("AVAILABLE", ignoreCase = true)
     val (statusLabel, statusColor, statusBg) = when (vehicle.status.uppercase()) {
         "AVAILABLE" -> Triple("MÜSAİT", Success, SuccessLight)
+        "RESERVED" -> Triple("REZERVE", Primary, PrimaryLight)
         "RENTED" -> Triple("KİRADA", Danger, DangerLight)
         "MAINTENANCE" -> Triple("BAKIMDA", TextSecondary, BgLight)
         else -> Triple(vehicle.status, TextSecondary, BgLight)
     }
+    val segmentLabel = VehicleSegment.labelFor(vehicle.segment)
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -90,14 +90,11 @@ fun VehicleDetailSheet(
                     color = TextPrimary,
                     modifier = Modifier.weight(1f),
                 )
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(statusBg)
-                        .padding(horizontal = 10.dp, vertical = 4.dp),
-                ) {
-                    Text(text = statusLabel, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = statusColor)
+                if (segmentLabel != null) {
+                    Chip(text = segmentLabel, textColor = Primary, background = PrimaryLight)
+                    Spacer(modifier = Modifier.width(6.dp))
                 }
+                Chip(text = statusLabel, textColor = statusColor, background = statusBg)
             }
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -168,7 +165,7 @@ fun VehicleDetailSheet(
                 SpecTile(
                     icon = Icons.Outlined.AirlineSeatReclineNormal,
                     label = "Koltuk",
-                    value = vehicle.seatCount?.let { "$it kişi" } ?: "—",
+                    value = vehicle.seats?.let { "$it kişi" } ?: "—",
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -207,39 +204,52 @@ fun VehicleDetailSheet(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(
+            if (isAvailable) {
+                // v2: doğrudan kilit açma yok; kiralama yalnız rezervasyon sonrası açılır.
+                Button(
                     onClick = onReserve,
                     modifier = Modifier
-                        .weight(1f)
+                        .fillMaxWidth()
                         .height(52.dp),
                     enabled = canReserve,
                     shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Primary),
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary),
                 ) {
                     Text(text = "Rezerve Et", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 }
-                Button(
-                    onClick = onUnlock,
+            } else {
+                // Meşgul araçlarda aksiyon yok; kullanıcı yalnızca detayı görür.
+                Box(
                     modifier = Modifier
-                        .weight(1f)
-                        .height(52.dp),
-                    enabled = canUnlock,
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(BgLight)
+                        .padding(vertical = 16.dp),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Lock,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
+                    Text(
+                        text = "Araç şu an müsait değil",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextSecondary,
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "Kilidi Aç", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
         }
+    }
+}
+
+@Composable
+private fun Chip(text: String, textColor: Color, background: Color) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(background)
+            .padding(horizontal = 10.dp, vertical = 4.dp),
+    ) {
+        Text(text = text, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = textColor)
     }
 }
 
@@ -302,11 +312,3 @@ private fun SpecTile(
         }
     }
 }
-
-/** ₺180 gibi tam sayıları ondalıksız, ₺4,50 gibi değerleri virgüllü iki basamakla yazar. */
-private fun formatTl(value: Double): String =
-    if (value % 1.0 == 0.0) {
-        value.toInt().toString()
-    } else {
-        String.format(Locale.US, "%.2f", value).replace('.', ',')
-    }

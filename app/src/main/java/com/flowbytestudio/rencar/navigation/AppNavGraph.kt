@@ -27,6 +27,7 @@ fun AppNavGraph(
     navController: NavHostController,
     modifier: Modifier = Modifier,
 ) {
+    // Yeni kayıt sonrası kullanıcı doğrudan ehliyet yükleme ekranıyla karşılanır.
     val startDestination = remember { if (AuthSession.justRegistered) LicenseUploadRoute else MapRoute }
     LaunchedEffect(Unit) { AuthSession.consumeJustRegistered() }
 
@@ -40,8 +41,8 @@ fun AppNavGraph(
                 onNavigateToReservation = { vehicleId ->
                     navController.navigate(ReservationRoute(vehicleId))
                 },
-                onNavigateToHandover = { vehicleId ->
-                    navController.navigate(HandoverRoute(vehicleId))
+                onNavigateToHandover = { rentalId ->
+                    navController.navigate(HandoverRoute(rentalId))
                 },
                 onNavigateToActiveRental = { rentalId ->
                     navController.navigate(ActiveRentalRoute(rentalId))
@@ -63,13 +64,6 @@ fun AppNavGraph(
         composable<ReferralRoute> {
             ReferralScreen(onBack = { navController.popBackStack() })
         }
-        composable<ReservationRoute> { backStackEntry ->
-            val route = backStackEntry.toRoute<ReservationRoute>()
-            ReservationScreen(
-                vehicleId = route.vehicleId,
-                onBack = { navController.popBackStack() },
-            )
-        }
         composable<LicenseUploadRoute> { backStackEntry ->
             val isStartDestination = backStackEntry.destination.route ==
                 navController.graph.findStartDestination().route
@@ -83,11 +77,33 @@ fun AppNavGraph(
                 },
             )
         }
+        composable<ReservationRoute> { backStackEntry ->
+            val route = backStackEntry.toRoute<ReservationRoute>()
+            ReservationScreen(
+                vehicleId = route.vehicleId,
+                onBack = { navController.popBackStack() },
+                // Kiralama PREPARING açıldıysa (dk/sa planı) foto akışına geçilir.
+                onNavigateToHandover = { rentalId ->
+                    navController.navigate(HandoverRoute(rentalId)) {
+                        popUpTo(MapRoute)
+                    }
+                },
+                // DAILY plan doğrudan ACTIVE başlar.
+                onNavigateToActiveRental = { rentalId ->
+                    navController.navigate(ActiveRentalRoute(rentalId)) {
+                        popUpTo(MapRoute)
+                    }
+                },
+            )
+        }
         composable<HandoverRoute> { backStackEntry ->
             val route = backStackEntry.toRoute<HandoverRoute>()
             HandoverScreen(
-                vehicleId = route.vehicleId,
+                rentalId = route.rentalId,
                 onBack = { navController.popBackStack() },
+                onCancelled = {
+                    navController.popBackStack(MapRoute, inclusive = false)
+                },
                 onRentalStarted = { rentalId ->
                     navController.navigate(ActiveRentalRoute(rentalId)) {
                         popUpTo(MapRoute)
