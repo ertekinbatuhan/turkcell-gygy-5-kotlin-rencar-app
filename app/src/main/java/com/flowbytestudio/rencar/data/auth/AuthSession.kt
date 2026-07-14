@@ -33,6 +33,10 @@ object AuthSession {
         justRegistered = false
     }
 
+    fun updateCurrentUser(user: UserResponse) {
+        _currentUser.value = user
+    }
+
     fun clear() {
         accessToken = null
         refreshToken = null

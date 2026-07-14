@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flowbytestudio.rencar.data.auth.AuthRepository
+import com.flowbytestudio.rencar.data.network.backendMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -38,6 +39,10 @@ class RegisterViewModel(
         }
     }
 
+    fun onReferralCodeChange(value: String) {
+        _uiState.update { it.copy(referralCode = value.uppercase(), error = null) }
+    }
+
     fun onRegister() {
         val state = _uiState.value
 
@@ -60,18 +65,26 @@ class RegisterViewModel(
                     password = state.password,
                     fullName = state.fullName,
                     phone = fullPhone,
+                    referralCode = state.referralCode.ifBlank { null },
                 )
                     .onSuccess {
                         Log.d("RencarAuth", "Register Success: phone=$fullPhone")
                         _uiState.update { it.copy(isLoading = false, isRegistered = true) }
                     }
                     .onFailure { throwable ->
-                        val statusCode = (throwable as? HttpException)?.code()
-                        Log.e("RencarAuth", "Register Failure: phone=$fullPhone, status=$statusCode", throwable)
+                        val httpException = throwable as? HttpException
+                        val statusCode = httpException?.code()
+                        val backendMessage = httpException?.backendMessage()
+                        Log.e(
+                            "RencarAuth",
+                            "Register Failure: phone=$fullPhone, status=$statusCode, message=$backendMessage",
+                            throwable,
+                        )
 
                         val errorMessage = when {
                             throwable is IOException -> "Bağlantı hatası oluştu."
-                            statusCode == 409 -> "Bu e-posta adresi zaten kayıtlı."
+                            statusCode == 409 -> backendMessage ?: "Bu e-posta veya telefon numarası zaten kayıtlı."
+                            statusCode == 400 && state.referralCode.isNotBlank() -> "Girilen davet kodu geçersiz."
                             else -> "Kayıt oluşturulamadı. Bilgilerinizi kontrol edin."
                         }
                         _uiState.update { it.copy(isLoading = false, error = errorMessage) }

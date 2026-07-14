@@ -28,8 +28,8 @@ When adding a new screen, follow the existing `profile` package as the template 
 
 ## Backend API — ground truth
 
-Base docs (Swagger UI, client-rendered): `https://rencar.halitkalayci.com/api/docs`
-Machine-readable spec (use this, not the UI page, when you need exact schemas): `https://rencar.halitkalayci.com/api/docs-json`
+Base docs (Swagger UI, client-rendered): `https://rencarv2.halitkalayci.com/api/docs`
+Machine-readable spec (use this, not the UI page, when you need exact schemas): `https://rencarv2.halitkalayci.com/api/docs-json`
 
 Title: **Araç Kiralama API** v1.0. Auth is JWT bearer (`accessToken`, ~15 min) with a separate rotating `refreshToken` (~7 days). All endpoints except `/health`, `/auth/register`, `/auth/login`, `/auth/verify-otp`, `/auth/refresh` require `Authorization: Bearer <accessToken>`.
 

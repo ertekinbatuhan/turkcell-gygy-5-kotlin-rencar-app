@@ -16,6 +16,7 @@ import com.flowbytestudio.rencar.ui.screens.history.HistoryScreen
 import com.flowbytestudio.rencar.ui.screens.license.LicenseUploadScreen
 import com.flowbytestudio.rencar.ui.screens.map.MapScreen
 import com.flowbytestudio.rencar.ui.screens.profile.ProfileScreen
+import com.flowbytestudio.rencar.ui.screens.referral.ReferralScreen
 import com.flowbytestudio.rencar.ui.screens.reservation.ReservationScreen
 import com.flowbytestudio.rencar.ui.screens.settings.SettingsScreen
 import com.flowbytestudio.rencar.ui.screens.tripsummary.TripSummaryScreen
@@ -53,10 +54,14 @@ fun AppNavGraph(
             ProfileScreen(
                 onNavigateToSettings = { navController.navigate(SettingsRoute) },
                 onNavigateToLicenseUpload = { navController.navigate(LicenseUploadRoute) },
+                onNavigateToReferral = { navController.navigate(ReferralRoute) },
             )
         }
         composable<SettingsRoute> {
             SettingsScreen(onBack = { navController.popBackStack() })
+        }
+        composable<ReferralRoute> {
+            ReferralScreen(onBack = { navController.popBackStack() })
         }
         composable<ReservationRoute> { backStackEntry ->
             val route = backStackEntry.toRoute<ReservationRoute>()

@@ -1,6 +1,7 @@
 package com.flowbytestudio.rencar.data.auth
 
 import retrofit2.http.Body
+import retrofit2.http.GET
 import retrofit2.http.POST
 
 interface AuthApi {
@@ -13,4 +14,7 @@ interface AuthApi {
 
     @POST("auth/verify-otp")
     suspend fun verifyOtp(@Body request: VerifyOtpRequest): AuthResponse
+
+    @GET("auth/me")
+    suspend fun me(): UserResponse
 }

@@ -139,6 +139,22 @@ fun RegisterScreen(
                 value = uiState.phone,
                 onValueChange = viewModel::onPhoneChange
             )
+            Spacer(modifier = Modifier.height(14.dp))
+
+            OutlinedTextField(
+                value = uiState.referralCode,
+                onValueChange = viewModel::onReferralCodeChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Davet kodu (opsiyonel)") },
+                singleLine = true,
+                shape = RoundedCornerShape(14.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Primary,
+                    unfocusedBorderColor = BorderColor,
+                    focusedContainerColor = Surface,
+                    unfocusedContainerColor = Surface
+                )
+            )
 
             if (uiState.error != null) {
                 Text(

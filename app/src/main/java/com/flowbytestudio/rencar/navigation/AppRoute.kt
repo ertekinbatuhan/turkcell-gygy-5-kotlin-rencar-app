@@ -30,6 +30,9 @@ data object ProfileRoute
 data object SettingsRoute
 
 @Serializable
+data object ReferralRoute
+
+@Serializable
 data class ReservationRoute(val vehicleId: String)
 
 @Serializable

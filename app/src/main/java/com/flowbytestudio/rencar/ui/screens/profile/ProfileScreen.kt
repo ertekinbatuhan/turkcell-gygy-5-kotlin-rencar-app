@@ -60,6 +60,7 @@ import com.flowbytestudio.rencar.ui.theme.TextSecondary
 fun ProfileScreen(
     onNavigateToSettings: () -> Unit = {},
     onNavigateToLicenseUpload: () -> Unit = {},
+    onNavigateToReferral: () -> Unit = {},
     viewModel: ProfileViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -74,7 +75,7 @@ fun ProfileScreen(
         onPaymentMethodsClick = {},
         onSettingsClick = onNavigateToSettings,
         onSupportClick = {},
-        onReferralClick = {},
+        onReferralClick = onNavigateToReferral,
         onLicenseClick = onNavigateToLicenseUpload,
         onLogoutClick = viewModel::onLogoutClick,
     )

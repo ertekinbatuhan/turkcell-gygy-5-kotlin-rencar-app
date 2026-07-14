@@ -68,15 +68,20 @@ class LicenseUploadViewModel(
         val state = _uiState.value
         val front = state.frontUri
         val back = state.backUri
+        val selfie = state.selfieUri
         if (front == null || back == null) {
             _uiState.update { it.copy(error = "Lütfen ön ve arka yüz fotoğraflarını seçin.") }
+            return
+        }
+        if (selfie == null) {
+            _uiState.update { it.copy(error = "Lütfen bir selfie çek veya yükle.") }
             return
         }
 
         viewModelScope.launch {
             _uiState.update { it.copy(isSubmitting = true, error = null) }
             try {
-                repository.upload(context, front, back)
+                repository.upload(context, front, back, selfie)
                     .onSuccess {
                         Log.d("RencarLicense", "Upload Success")
                         _uiState.update { it.copy(isSubmitting = false, isSubmitted = true) }

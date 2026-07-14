@@ -11,8 +11,17 @@ class AuthRepository(
         password: String,
         fullName: String,
         phone: String,
+        referralCode: String? = null,
     ): Result<AuthResponse> = runCatching {
-        api.register(RegisterRequest(email = email, password = password, fullName = fullName, phone = phone))
+        api.register(
+            RegisterRequest(
+                email = email,
+                password = password,
+                fullName = fullName,
+                phone = phone,
+                referralCode = referralCode,
+            )
+        )
     }.onSuccess { response ->
         AuthSession.onAuthenticated(response, isNewRegistration = true)
     }
@@ -25,5 +34,11 @@ class AuthRepository(
         api.verifyOtp(VerifyOtpRequest(phone = phone, code = code))
     }.onSuccess { response ->
         AuthSession.onAuthenticated(response)
+    }
+
+    suspend fun me(): Result<UserResponse> = runCatching {
+        api.me()
+    }.onSuccess { user ->
+        AuthSession.updateCurrentUser(user)
     }
 }

@@ -13,6 +13,7 @@ interface LicenseApi {
     suspend fun upload(
         @Part front: MultipartBody.Part,
         @Part back: MultipartBody.Part,
+        @Part selfie: MultipartBody.Part,
     ): LicenseResponse
 
     @GET("license/status")

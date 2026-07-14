@@ -16,15 +16,18 @@ class LicenseRepository(
         context: Context,
         frontUri: Uri,
         backUri: Uri,
+        selfieUri: Uri,
     ): Result<LicenseResponse> = runCatching {
         val frontPart = createImagePart(context, frontUri, "front")
         val backPart = createImagePart(context, backUri, "back")
-        api.upload(front = frontPart, back = backPart)
+        val selfiePart = createImagePart(context, selfieUri, "selfie")
+        api.upload(front = frontPart, back = backPart, selfie = selfiePart)
     }
 
     private fun createImagePart(context: Context, uri: Uri, partName: String): MultipartBody.Part {
-        val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
-        val extension = if (mimeType == "image/png") "png" else "jpg"
+        val isPng = context.contentResolver.getType(uri) == "image/png"
+        val mimeType = if (isPng) "image/png" else "image/jpeg"
+        val extension = if (isPng) "png" else "jpg"
         val tempFile = File.createTempFile(partName, ".$extension", context.cacheDir)
         context.contentResolver.openInputStream(uri)?.use { input ->
             tempFile.outputStream().use { output -> input.copyTo(output) }

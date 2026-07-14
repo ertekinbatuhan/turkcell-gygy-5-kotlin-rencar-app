@@ -8,6 +8,7 @@ data class RegisterRequest(
     val password: String,
     val fullName: String,
     val phone: String,
+    val referralCode: String? = null,
 )
 
 @Serializable
@@ -39,4 +40,5 @@ data class UserResponse(
     val role: String,
     // Backend UserResponseDto'da henüz yok; profil avatarı için önden eklendi.
     val avatarUrl: String? = null,
+    val referralCode: String? = null,
 )
