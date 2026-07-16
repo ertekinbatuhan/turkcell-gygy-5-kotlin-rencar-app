@@ -55,7 +55,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -183,6 +185,10 @@ fun MapScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val sheetState = rememberModalBottomSheetState()
     var selectedVehicle by remember { mutableStateOf<VehicleDto?>(null) }
+    // Filtre kartının gerçek yüksekliği: segment/tip satırlarının sayısına göre
+    // değişebildiği için konum butonu sabit bir değer yerine buna göre konumlanır.
+    val localDensity = LocalDensity.current
+    var bottomCardHeight by remember { mutableStateOf(0.dp) }
 
     var hasLocationPermission by remember {
         mutableStateOf(
@@ -494,7 +500,7 @@ fun MapScreen(
             },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(bottom = 236.dp, end = 20.dp)
+                .padding(bottom = bottomCardHeight + 16.dp, end = 20.dp)
                 .size(46.dp)
                 .clip(CircleShape)
                 .background(Surface),
@@ -503,7 +509,11 @@ fun MapScreen(
         }
 
         BottomVehiclesCard(
-            modifier = Modifier.align(Alignment.BottomCenter),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .onGloballyPositioned { coordinates ->
+                    bottomCardHeight = with(localDensity) { coordinates.size.height.toDp() }
+                },
             uiState = uiState,
             onSegmentSelected = { segment -> viewModel.onSegmentSelected(segment) },
             onTypeSelected = { type ->
@@ -532,7 +542,7 @@ fun MapScreen(
             hostState = snackbarHostState,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 260.dp),
+                .padding(bottom = bottomCardHeight + 40.dp),
         ) { data ->
             Snackbar(snackbarData = data)
         }

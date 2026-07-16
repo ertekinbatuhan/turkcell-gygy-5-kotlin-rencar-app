@@ -60,7 +60,11 @@ class MapViewModel(
     // Uygulama kapansa bile kullanıcı devam eden akışına haritadan geri dönebilir.
     private fun loadBanners() {
         viewModelScope.launch {
+            // /rentals/active teorik olarak yalnız ACTIVE (süren) yolculuğu döner, ama
+            // status'ü burada da doğrulamak PREPARING bir kiralamanın (ör. foto akışından
+            // geri tuşuyla çıkılmış) yanlışlıkla "Kiralama aktif" bannerına düşmesini engeller.
             val active = rentalRepository.getActiveRental().getOrNull()
+                ?.takeIf { it.status == "ACTIVE" }
             if (active != null) {
                 _uiState.update {
                     it.copy(

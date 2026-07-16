@@ -15,16 +15,9 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Snackbar
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,12 +27,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -61,19 +54,21 @@ import com.flowbytestudio.rencar.ui.theme.Surface
 import com.flowbytestudio.rencar.ui.theme.TextPrimary
 import com.flowbytestudio.rencar.ui.theme.TextSecondary
 import java.util.Locale
-import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
+import com.flowbytestudio.rencar.ui.screens.map.MarkerBitmapFactory
 import org.maplibre.android.style.layers.CircleLayer
 import org.maplibre.android.style.layers.PropertyFactory
+import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.geojson.Point
 
 private const val VEHICLE_SOURCE_ID = "active-rental-vehicle"
+private const val VEHICLE_ICON_ID = "active-rental-vehicle-icon"
 
 private const val OSM_RASTER_STYLE = """
 {
@@ -110,8 +105,6 @@ fun ActiveRentalScreen(
     )
     val uiState by viewModel.uiState.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
-    val scope = rememberCoroutineScope()
-    val snackbarHostState = remember { SnackbarHostState() }
 
     // finish başarılı / 404 (başka yerden bitmiş) / baştan COMPLETED → TripSummary'ye devret.
     LaunchedEffect(uiState.ended) {
@@ -121,6 +114,7 @@ fun ActiveRentalScreen(
     var mapView by remember { mutableStateOf<MapView?>(null) }
     var mapLibreMap by remember { mutableStateOf<MapLibreMap?>(null) }
     var mapStyle by remember { mutableStateOf<Style?>(null) }
+    val density = LocalDensity.current.density
 
     Box(modifier = Modifier.fillMaxSize().background(Background)) {
         AndroidView(
@@ -141,12 +135,18 @@ fun ActiveRentalScreen(
                                     PropertyFactory.circleBlur(0.4f),
                                 ),
                             )
+                            style.addImage(
+                                VEHICLE_ICON_ID,
+                                MarkerBitmapFactory.createVehicleIcon(
+                                    backgroundColor = android.graphics.Color.parseColor("#0B6BCB"),
+                                    density = density,
+                                ),
+                            )
                             style.addLayer(
-                                CircleLayer("vehicle-layer", VEHICLE_SOURCE_ID).withProperties(
-                                    PropertyFactory.circleColor(android.graphics.Color.parseColor("#0B6BCB")),
-                                    PropertyFactory.circleRadius(11f),
-                                    PropertyFactory.circleStrokeColor(android.graphics.Color.WHITE),
-                                    PropertyFactory.circleStrokeWidth(3f),
+                                SymbolLayer("vehicle-layer", VEHICLE_SOURCE_ID).withProperties(
+                                    PropertyFactory.iconImage(VEHICLE_ICON_ID),
+                                    PropertyFactory.iconAllowOverlap(true),
+                                    PropertyFactory.iconIgnorePlacement(true),
                                 ),
                             )
                             mapStyle = style
@@ -218,21 +218,9 @@ fun ActiveRentalScreen(
 
         ActiveRentalCard(
             uiState = uiState,
-            onLockToggle = {
-                scope.launch { snackbarHostState.showSnackbar("Kilitleme yakında eklenecek.") }
-            },
             onEnd = viewModel::endRental,
             modifier = Modifier.align(Alignment.BottomCenter),
         )
-
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 280.dp),
-        ) { data ->
-            Snackbar(snackbarData = data)
-        }
     }
 }
 
@@ -268,7 +256,6 @@ private fun ActiveRentalPill(
 @Composable
 private fun ActiveRentalCard(
     uiState: ActiveRentalUiState,
-    onLockToggle: () -> Unit,
     onEnd: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -349,41 +336,23 @@ private fun ActiveRentalCard(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(
-                    onClick = onLockToggle,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(52.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Lock,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
+            Button(
+                onClick = onEnd,
+                enabled = !uiState.isEnding,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Danger),
+            ) {
+                if (uiState.isEnding) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp,
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "Kilitle / Aç", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                }
-                Button(
-                    onClick = onEnd,
-                    enabled = !uiState.isEnding,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(52.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Danger),
-                ) {
-                    if (uiState.isEnding) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            color = Color.White,
-                            strokeWidth = 2.dp,
-                        )
-                    } else {
-                        Text(text = "Kiralamayı Bitir", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                    }
+                } else {
+                    Text(text = "Kiralamayı Bitir", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
         }

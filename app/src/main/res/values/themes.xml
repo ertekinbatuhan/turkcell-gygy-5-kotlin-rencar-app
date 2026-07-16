@@ -2,4 +2,13 @@
 <resources>
 
     <style name="Theme.Rencar" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- Uygulama açılışında (Compose içeriği hazır olana kadar) gösterilen sistem
+         splash ekranı: koyu nötr zemin + uygulama ikonuyla aynı mavi rozet
+         (mavi kare + beyaz araç), onboarding illüstrasyonuyla aynı dil. -->
+    <style name="Theme.Rencar.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#0C0F14</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_badge</item>
+        <item name="postSplashScreenTheme">@style/Theme.Rencar</item>
+    </style>
 </resources>
