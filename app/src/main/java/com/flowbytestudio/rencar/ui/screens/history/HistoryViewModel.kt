@@ -26,6 +26,13 @@ class HistoryViewModel(
         loadStats()
     }
 
+    // Kullanıcı bu ekrana her döndüğünde (ör. bir yolculuk ödendikten sonra)
+    // listeyi ve aylık özeti backend'den tazeler.
+    fun refresh() {
+        loadRentals()
+        loadStats()
+    }
+
     private fun loadRentals() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
@@ -51,14 +58,21 @@ class HistoryViewModel(
 
     private fun loadStats() {
         viewModelScope.launch {
-            rentalRepository.getStats().onSuccess { stats ->
-                _uiState.update {
-                    it.copy(
-                        tripCountThisMonth = stats.tripCount,
-                        totalSpentThisMonth = stats.totalSpent,
-                    )
+            rentalRepository.getStats()
+                .onSuccess { stats ->
+                    _uiState.update {
+                        it.copy(
+                            tripCountThisMonth = stats.tripCount,
+                            totalSpentThisMonth = stats.totalSpent,
+                            statsErrorMessage = null,
+                        )
+                    }
                 }
-            }
+                .onFailure {
+                    _uiState.update {
+                        it.copy(statsErrorMessage = "Aylık özet yüklenemedi.")
+                    }
+                }
         }
     }
 }

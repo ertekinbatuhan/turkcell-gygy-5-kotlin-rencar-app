@@ -7,4 +7,5 @@ data class HistoryUiState(
     val totalSpentThisMonth: Double = 0.0,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
+    val statsErrorMessage: String? = null,
 )

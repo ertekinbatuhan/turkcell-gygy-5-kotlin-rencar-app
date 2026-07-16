@@ -2,6 +2,7 @@ package com.flowbytestudio.rencar.ui.screens.history
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,7 +27,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,9 +37,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.flowbytestudio.rencar.ui.common.formatTl
@@ -53,14 +59,35 @@ import com.flowbytestudio.rencar.ui.theme.TextSecondary
 private val WarningAmber = Color(0xFFF59E0B)
 
 @Composable
-fun HistoryScreen(viewModel: HistoryViewModel = viewModel()) {
+fun HistoryScreen(
+    viewModel: HistoryViewModel = viewModel(),
+    onNavigateToPayment: (rentalId: String) -> Unit = {},
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    HistoryContent(uiState = uiState)
+    // Bottom nav ile bu sekmeye her dönüşte listeyi tazele: ödeme başka bir
+    // ekranda (TripSummary) alınmış olabilir, ViewModel ise navigasyon boyunca
+    // canlı kalıp init{} bir daha çalışmadığı için elle tetiklemek gerekiyor.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val currentViewModel by rememberUpdatedState(viewModel)
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                currentViewModel.refresh()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    HistoryContent(uiState = uiState, onNavigateToPayment = onNavigateToPayment)
 }
 
 @Composable
-private fun HistoryContent(uiState: HistoryUiState) {
+private fun HistoryContent(
+    uiState: HistoryUiState,
+    onNavigateToPayment: (rentalId: String) -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -75,11 +102,19 @@ private fun HistoryContent(uiState: HistoryUiState) {
             )
             if (uiState.rentals.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(3.dp))
-                Text(
-                    text = "Bu ay ${uiState.tripCountThisMonth} yolculuk · ₺${formatTl(uiState.totalSpentThisMonth)} harcama",
-                    fontSize = 14.5.sp,
-                    color = TextSecondary,
-                )
+                if (uiState.statsErrorMessage != null) {
+                    Text(
+                        text = uiState.statsErrorMessage,
+                        fontSize = 14.5.sp,
+                        color = Danger,
+                    )
+                } else {
+                    Text(
+                        text = "Bu ay ${uiState.tripCountThisMonth} yolculuk · ₺${formatTl(uiState.totalSpentThisMonth)} harcama",
+                        fontSize = 14.5.sp,
+                        color = TextSecondary,
+                    )
+                }
             }
         }
 
@@ -104,7 +139,14 @@ private fun HistoryContent(uiState: HistoryUiState) {
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     items(uiState.rentals, key = { it.id }) { rental ->
-                        RentalCard(rental)
+                        RentalCard(
+                            rental = rental,
+                            onClick = if (rental.isUnpaidCompleted) {
+                                { onNavigateToPayment(rental.id) }
+                            } else {
+                                null
+                            },
+                        )
                     }
                     item { Spacer(modifier = Modifier.height(16.dp)) }
                 }
@@ -114,10 +156,14 @@ private fun HistoryContent(uiState: HistoryUiState) {
 }
 
 @Composable
-private fun RentalCard(rental: RentalUiModel) {
+private fun RentalCard(rental: RentalUiModel, onClick: (() -> Unit)? = null) {
     Box(modifier = Modifier.fillMaxWidth()) {
         Surface(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = if (onClick != null) {
+                Modifier.fillMaxWidth().clickable(onClick = onClick)
+            } else {
+                Modifier.fillMaxWidth()
+            },
             shape = RoundedCornerShape(20.dp),
             color = Surface,
             tonalElevation = 0.dp,

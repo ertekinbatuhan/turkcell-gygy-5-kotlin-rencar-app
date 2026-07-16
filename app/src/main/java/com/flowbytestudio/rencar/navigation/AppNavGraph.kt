@@ -49,7 +49,13 @@ fun AppNavGraph(
                 },
             )
         }
-        composable<HistoryRoute> { HistoryScreen() }
+        composable<HistoryRoute> {
+            HistoryScreen(
+                onNavigateToPayment = { rentalId ->
+                    navController.navigate(TripSummaryRoute(rentalId))
+                },
+            )
+        }
         composable<WalletRoute> { WalletScreen() }
         composable<ProfileRoute> {
             ProfileScreen(
