@@ -32,6 +32,13 @@ class WalletViewModel(
 
     fun retry() = load()
 
+    // Kullanıcı bu ekrana her döndüğünde (ör. bir yolculuğu ödedikten sonra)
+    // bakiyeyi ve son işlemleri sessizce tazeler; init{} navigasyon boyunca
+    // ViewModel canlı kaldığı için yalnızca ilk açılışta çalışır.
+    fun refresh() {
+        viewModelScope.launch { refreshQuietly() }
+    }
+
     private fun load() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }

@@ -43,9 +43,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,10 +55,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.flowbytestudio.rencar.ui.common.formatTl
@@ -80,6 +85,22 @@ private val MastercardOrange = Color(0xFFF79E1B)
 @Composable
 fun WalletScreen(viewModel: WalletViewModel = viewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // Bottom nav ile bu sekmeye her dönüşte bakiye + son işlemleri tazele:
+    // ödeme başka bir ekranda (TripSummary) alınmış olabilir, ViewModel ise
+    // navigasyon boyunca canlı kalıp init{} bir daha çalışmadığı için elle
+    // tetiklemek gerekiyor.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val currentViewModel by rememberUpdatedState(viewModel)
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                currentViewModel.refresh()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     // Silme onayı için seçili kart (yerel; onaydan sonra ViewModel'e iletilir).
     var cardPendingDelete by remember { mutableStateOf<WalletCardUiModel?>(null) }
