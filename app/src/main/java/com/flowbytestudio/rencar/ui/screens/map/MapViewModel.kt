@@ -2,6 +2,8 @@ package com.flowbytestudio.rencar.ui.screens.map
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.flowbytestudio.rencar.data.geocoding.GeocodingRepository
+import com.flowbytestudio.rencar.data.geocoding.GeocodingResult
 import com.flowbytestudio.rencar.data.rentals.RentalRepository
 import com.flowbytestudio.rencar.data.reservations.ReservationRepository
 import com.flowbytestudio.rencar.data.vehicles.VehicleDto
@@ -10,6 +12,7 @@ import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,6 +25,7 @@ class MapViewModel(
     private val repository: VehicleRepository = VehicleRepository(),
     private val rentalRepository: RentalRepository = RentalRepository(),
     private val reservationRepository: ReservationRepository = ReservationRepository(),
+    private val geocodingRepository: GeocodingRepository = GeocodingRepository(),
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MapUiState())
@@ -136,7 +140,46 @@ class MapViewModel(
         _uiState.update { it.copy(focusedVehicleId = nearest?.id) }
         return nearest
     }
+
+    // --- Yer arama (üst arama çubuğu, ör. "Bursa") -----------------------------
+
+    private var searchJob: Job? = null
+
+    fun onSearchQueryChange(query: String) {
+        _uiState.update { it.copy(searchQuery = query) }
+        searchJob?.cancel()
+        if (query.isBlank()) {
+            _uiState.update { it.copy(searchResults = emptyList(), isSearching = false) }
+            return
+        }
+        searchJob = viewModelScope.launch {
+            delay(SEARCH_DEBOUNCE_MS)
+            _uiState.update { it.copy(isSearching = true) }
+            geocodingRepository.search(query)
+                .onSuccess { results ->
+                    _uiState.update { it.copy(isSearching = false, searchResults = results) }
+                }
+                .onFailure {
+                    _uiState.update { it.copy(isSearching = false, searchResults = emptyList()) }
+                }
+        }
+    }
+
+    // Bir arama sonucu seçildiğinde çubuğu ve sonuç listesini temizler.
+    fun onSearchResultSelected(result: GeocodingResult) {
+        searchJob?.cancel()
+        _uiState.update {
+            it.copy(searchQuery = "", searchResults = emptyList(), isSearching = false)
+        }
+    }
+
+    fun clearSearch() {
+        searchJob?.cancel()
+        _uiState.update { it.copy(searchQuery = "", searchResults = emptyList(), isSearching = false) }
+    }
 }
+
+private const val SEARCH_DEBOUNCE_MS = 450L
 
 private fun Throwable.toVehicleLoadErrorMessage(): String = when {
     this is HttpException && code() == 403 ->

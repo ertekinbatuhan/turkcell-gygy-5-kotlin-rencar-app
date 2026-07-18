@@ -24,15 +24,17 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MyLocation
-import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.NearMe
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Snackbar
@@ -54,6 +56,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
@@ -68,6 +71,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.flowbytestudio.rencar.data.geocoding.GeocodingResult
 import com.flowbytestudio.rencar.data.vehicles.VehicleDto
 import com.flowbytestudio.rencar.ui.common.formatTl
 import com.flowbytestudio.rencar.ui.theme.Background
@@ -439,7 +443,19 @@ fun MapScreen(
                 .padding(horizontal = 20.dp)
                 .padding(top = 16.dp),
         ) {
-            SearchBar()
+            SearchBar(
+                query = uiState.searchQuery,
+                onQueryChange = viewModel::onSearchQueryChange,
+                results = uiState.searchResults,
+                isSearching = uiState.isSearching,
+                onResultClick = { result ->
+                    viewModel.onSearchResultSelected(result)
+                    mapLibreMap?.easeCamera(
+                        CameraUpdateFactory.newLatLngZoom(LatLng(result.latitude, result.longitude), 13.0),
+                        800,
+                    )
+                },
+            )
 
             when (val banner = uiState.banner) {
                 is MapBanner.ActiveRental -> {
@@ -704,28 +720,92 @@ private fun startLocationUpdates(fusedClient: FusedLocationProviderClient, callb
 }
 
 @Composable
-private fun SearchBar() {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = Surface,
-        shadowElevation = 3.dp,
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
+private fun SearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    results: List<GeocodingResult>,
+    isSearching: Boolean,
+    onResultClick: (GeocodingResult) -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            color = Surface,
+            shadowElevation = 3.dp,
         ) {
-            Icon(Icons.Outlined.Search, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(20.dp))
-            Spacer(modifier = Modifier.width(10.dp))
-            Text(
-                text = "Nereden araç alacaksın?",
-                fontSize = 15.sp,
-                color = TextSecondary,
-                modifier = Modifier.weight(1f),
-            )
-            Icon(Icons.Outlined.FilterList, contentDescription = "Filtrele", tint = TextSecondary, modifier = Modifier.size(20.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Outlined.Search, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(20.dp))
+                Spacer(modifier = Modifier.width(10.dp))
+                Box(modifier = Modifier.weight(1f)) {
+                    if (query.isEmpty()) {
+                        Text(text = "Nereden araç alacaksın?", fontSize = 15.sp, color = TextSecondary)
+                    }
+                    BasicTextField(
+                        value = query,
+                        onValueChange = onQueryChange,
+                        singleLine = true,
+                        textStyle = androidx.compose.ui.text.TextStyle(fontSize = 15.sp, color = TextPrimary),
+                        cursorBrush = SolidColor(Primary),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                if (isSearching) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = Primary)
+                } else if (query.isNotEmpty()) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = "Aramayı temizle",
+                        tint = TextSecondary,
+                        modifier = Modifier.size(18.dp).clickable { onQueryChange("") },
+                    )
+                }
+            }
+        }
+
+        if (results.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = Surface,
+                shadowElevation = 3.dp,
+            ) {
+                Column {
+                    results.forEachIndexed { index, result ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onResultClick(result) }
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.NearMe,
+                                contentDescription = null,
+                                tint = TextSecondary,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = result.displayName,
+                                fontSize = 14.sp,
+                                color = TextPrimary,
+                                maxLines = 2,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                            )
+                        }
+                        if (index != results.lastIndex) {
+                            HorizontalDivider(color = Background, thickness = 1.dp)
+                        }
+                    }
+                }
+            }
         }
     }
 }

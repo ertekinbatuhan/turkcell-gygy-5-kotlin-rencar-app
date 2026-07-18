@@ -1,5 +1,6 @@
 package com.flowbytestudio.rencar.ui.screens.map
 
+import com.flowbytestudio.rencar.data.geocoding.GeocodingResult
 import com.flowbytestudio.rencar.data.rentals.RentalDto
 import com.flowbytestudio.rencar.data.reservations.ReservationResponse
 import com.flowbytestudio.rencar.data.vehicles.VehicleDto
@@ -19,6 +20,10 @@ data class MapUiState(
     val activeReservation: ReservationResponse? = null,
     // Rezervasyon geri sayımı için yerelde saniye saniye azaltılan kalan süre.
     val reservationRemainingSeconds: Long? = null,
+    // Üst aramadaki yer adı araması (ör. "Bursa") — Nominatim (OSM) ile debounce'lı çalışır.
+    val searchQuery: String = "",
+    val searchResults: List<GeocodingResult> = emptyList(),
+    val isSearching: Boolean = false,
 ) {
     // Haritada gösterilen araçlar (renkli müsait + gri meşgul), tip filtresi uygulanmış.
     val filteredVehicles: List<VehicleDto>
