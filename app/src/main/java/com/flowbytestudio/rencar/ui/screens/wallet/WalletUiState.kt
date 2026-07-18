@@ -1,13 +1,20 @@
 package com.flowbytestudio.rencar.ui.screens.wallet
 
+import androidx.annotation.StringRes
+
 // Cüzdan hareketinin görsel türü (ikon + renk seçimi ekranda buna göre yapılır).
 enum class WalletTransactionKind { TOPUP, RENTAL_PAYMENT, REFERRAL_BONUS, OTHER }
 
 data class WalletTransactionUiModel(
     val id: String,
     val kind: WalletTransactionKind,
-    val title: String,
-    val subtitle: String,
+    // Sabit etiketli başlık kaynağı; titleText doluysa onun yerine o gösterilir.
+    @StringRes val titleRes: Int,
+    // Başlık olarak gösterilecek sunucu açıklaması (RENTAL_PAYMENT/OTHER, doluysa).
+    val titleText: String?,
+    // Sunucudan gelen açıklama; ikincil satırda tarihle birlikte gösterilebilir.
+    val description: String,
+    val date: String,
     // İşaretli tutar (TL): + yükleme/bonus, - ödeme.
     val amount: Double,
 )
@@ -25,7 +32,7 @@ data class WalletCardUiModel(
 data class WalletUiState(
     // İlk yükleme durumu (cüzdan + kartlar).
     val isLoading: Boolean = false,
-    val errorMessage: String? = null,
+    @StringRes val errorMessage: Int? = null,
 
     val balance: Double = 0.0,
     val transactions: List<WalletTransactionUiModel> = emptyList(),
@@ -34,14 +41,14 @@ data class WalletUiState(
     // Bakiye yükleme sayfası (bottom sheet).
     val showTopupSheet: Boolean = false,
     val isToppingUp: Boolean = false,
-    val topupError: String? = null,
+    @StringRes val topupError: Int? = null,
 
     // Kart ekleme sayfası (bottom sheet).
     val showAddCardSheet: Boolean = false,
     val isAddingCard: Boolean = false,
-    val addCardError: String? = null,
+    @StringRes val addCardError: Int? = null,
 
     // Kart aksiyonları (öntanımlı yap / sil).
     val cardActionInProgress: Boolean = false,
-    val cardActionError: String? = null,
+    @StringRes val cardActionError: Int? = null,
 )

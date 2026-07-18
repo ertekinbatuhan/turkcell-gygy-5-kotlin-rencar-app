@@ -1,12 +1,15 @@
 package com.flowbytestudio.rencar.ui.screens.wallet
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.flowbytestudio.rencar.R
 import com.flowbytestudio.rencar.data.cards.CardDto
 import com.flowbytestudio.rencar.data.cards.CardRepository
 import com.flowbytestudio.rencar.data.wallet.WalletRepository
 import com.flowbytestudio.rencar.data.wallet.WalletResponse
 import com.flowbytestudio.rencar.data.wallet.WalletTransactionDto
+import com.flowbytestudio.rencar.ui.common.toErrorRes
 import java.time.OffsetDateTime
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -16,7 +19,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import retrofit2.HttpException
 
 class WalletViewModel(
     private val walletRepository: WalletRepository = WalletRepository(),
@@ -76,7 +78,7 @@ class WalletViewModel(
     fun topup(amountText: String) {
         val amount = amountText.trim().replace(',', '.').toDoubleOrNull()
         if (amount == null || amount < 10.0 || amount > 5000.0) {
-            _uiState.update { it.copy(topupError = "10-5000 TL aralığında olmalı") }
+            _uiState.update { it.copy(topupError = R.string.wallet_topup_range_error) }
             return
         }
         viewModelScope.launch {
@@ -119,10 +121,10 @@ class WalletViewModel(
         val year = yearText.toIntOrNull()
         val validationError = when {
             cleanLast4.length != 4 || cleanLast4.any { !it.isDigit() } ->
-                "Son 4 hane tam 4 rakam olmalı"
-            month == null || month !in 1..12 -> "Ay 1-12 arasında olmalı"
-            year == null || yearText.length != 4 -> "Yıl 4 haneli olmalı"
-            isExpiryPast(month, year) -> "Kartın son kullanma tarihi geçmiş"
+                R.string.wallet_last4_validation_error
+            month == null || month !in 1..12 -> R.string.wallet_expiry_month_validation_error
+            year == null || yearText.length != 4 -> R.string.wallet_expiry_year_validation_error
+            isExpiryPast(month, year) -> R.string.wallet_card_expired_error
             else -> null
         }
         if (validationError != null) {
@@ -258,20 +260,26 @@ private fun WalletTransactionDto.toUiModel(): WalletTransactionUiModel {
         "REFERRAL_BONUS" -> WalletTransactionKind.REFERRAL_BONUS
         else -> WalletTransactionKind.OTHER
     }
-    val label = when (kind) {
-        WalletTransactionKind.TOPUP -> "Bakiye yükleme"
-        WalletTransactionKind.REFERRAL_BONUS -> "Davet bonusu"
-        WalletTransactionKind.RENTAL_PAYMENT -> description.ifBlank { "Yolculuk ödemesi" }
-        WalletTransactionKind.OTHER -> description.ifBlank { "İşlem" }
+    val labelRes = when (kind) {
+        WalletTransactionKind.TOPUP -> R.string.wallet_transaction_topup_title
+        WalletTransactionKind.REFERRAL_BONUS -> R.string.wallet_transaction_referral_bonus_title
+        WalletTransactionKind.RENTAL_PAYMENT -> R.string.wallet_transaction_rental_payment_title
+        WalletTransactionKind.OTHER -> R.string.wallet_transaction_other_title
     }
-    val date = formatDateTime(createdAt)
-    // Sabit etiketli türlerde açıklama etiketten farklıysa onu da ikincil satırda gösteririz.
-    val subtitle = if (description.isNotBlank() && description != label) "$description · $date" else date
+    // RENTAL_PAYMENT/OTHER türlerinde açıklama doluysa başlık olarak açıklama gösterilir;
+    // ikincil satır (açıklama · tarih) kararı kaynak çözümü gerektirdiği için ekranda verilir.
+    val titleText = when (kind) {
+        WalletTransactionKind.RENTAL_PAYMENT, WalletTransactionKind.OTHER ->
+            description.takeIf { it.isNotBlank() }
+        else -> null
+    }
     return WalletTransactionUiModel(
         id = id,
         kind = kind,
-        title = label,
-        subtitle = subtitle,
+        titleRes = labelRes,
+        titleText = titleText,
+        description = description,
+        date = formatDateTime(createdAt),
         amount = amount,
     )
 }
@@ -284,26 +292,38 @@ private fun CardDto.toUiModel(): WalletCardUiModel = WalletCardUiModel(
     isDefault = isDefault,
 )
 
-private fun Throwable?.toLoadErrorMessage(): String = when {
-    this is HttpException && code() == 401 -> "Oturumun sona ermiş. Lütfen tekrar giriş yap."
-    this is HttpException && code() == 403 -> "Cüzdan için ehliyet onayın gerekiyor."
-    else -> "Cüzdan yüklenemedi. Lütfen tekrar dene."
-}
+@StringRes
+private fun Throwable.toLoadErrorMessage(): Int = toErrorRes(
+    fallback = R.string.wallet_error_load_failed,
+    overrides = mapOf(
+        401 to R.string.common_error_session_expired,
+        403 to R.string.wallet_error_license_required,
+    ),
+)
 
-private fun Throwable.toTopupErrorMessage(): String = when {
-    this is HttpException && code() == 400 -> "10-5000 TL aralığında olmalı"
-    this is HttpException && code() == 401 -> "Oturumun sona ermiş. Lütfen tekrar giriş yap."
-    else -> "Bakiye yüklenemedi. Lütfen tekrar dene."
-}
+@StringRes
+private fun Throwable.toTopupErrorMessage(): Int = toErrorRes(
+    fallback = R.string.wallet_error_topup_failed,
+    overrides = mapOf(
+        400 to R.string.wallet_topup_range_error,
+        401 to R.string.common_error_session_expired,
+    ),
+)
 
-private fun Throwable?.toCreateCardErrorMessage(): String = when {
-    this is HttpException && code() == 400 -> "Kart bilgileri geçersiz. Lütfen kontrol et."
-    this is HttpException && code() == 401 -> "Oturumun sona ermiş. Lütfen tekrar giriş yap."
-    else -> "Kart eklenemedi. Lütfen tekrar dene."
-}
+@StringRes
+private fun Throwable.toCreateCardErrorMessage(): Int = toErrorRes(
+    fallback = R.string.wallet_error_add_card_failed,
+    overrides = mapOf(
+        400 to R.string.wallet_error_card_invalid,
+        401 to R.string.common_error_session_expired,
+    ),
+)
 
-private fun Throwable?.toCardActionErrorMessage(): String = when {
-    this is HttpException && code() == 404 -> "Kart bulunamadı."
-    this is HttpException && code() == 401 -> "Oturumun sona ermiş. Lütfen tekrar giriş yap."
-    else -> "İşlem tamamlanamadı. Lütfen tekrar dene."
-}
+@StringRes
+private fun Throwable?.toCardActionErrorMessage(): Int = this?.toErrorRes(
+    fallback = R.string.wallet_error_action_failed,
+    overrides = mapOf(
+        404 to R.string.wallet_error_card_not_found,
+        401 to R.string.common_error_session_expired,
+    ),
+) ?: R.string.wallet_error_action_failed

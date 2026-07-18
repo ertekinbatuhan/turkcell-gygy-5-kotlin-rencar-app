@@ -34,16 +34,19 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.flowbytestudio.rencar.R
 import com.flowbytestudio.rencar.data.vehicles.VehicleDto
 import com.flowbytestudio.rencar.ui.common.formatTl
 import com.flowbytestudio.rencar.ui.theme.BgLight
 import com.flowbytestudio.rencar.ui.theme.BorderLight
 import com.flowbytestudio.rencar.ui.theme.Danger
 import com.flowbytestudio.rencar.ui.theme.DangerLight
+import com.flowbytestudio.rencar.ui.theme.Dimens
 import com.flowbytestudio.rencar.ui.theme.Primary
 import com.flowbytestudio.rencar.ui.theme.PrimaryLight
 import com.flowbytestudio.rencar.ui.theme.Success
@@ -68,10 +71,10 @@ fun VehicleDetailSheet(
     val typeColor = VehicleType.colorFor(vehicle.type)
     val isAvailable = vehicle.status.equals("AVAILABLE", ignoreCase = true)
     val (statusLabel, statusColor, statusBg) = when (vehicle.status.uppercase()) {
-        "AVAILABLE" -> Triple("MÜSAİT", Success, SuccessLight)
-        "RESERVED" -> Triple("REZERVE", Primary, PrimaryLight)
-        "RENTED" -> Triple("KİRADA", Danger, DangerLight)
-        "MAINTENANCE" -> Triple("BAKIMDA", TextSecondary, BgLight)
+        "AVAILABLE" -> Triple(stringResource(R.string.map_vehicle_status_available), Success, SuccessLight)
+        "RESERVED" -> Triple(stringResource(R.string.map_vehicle_status_reserved), Primary, PrimaryLight)
+        "RENTED" -> Triple(stringResource(R.string.map_vehicle_status_rented), Danger, DangerLight)
+        "MAINTENANCE" -> Triple(stringResource(R.string.map_vehicle_status_maintenance), TextSecondary, BgLight)
         else -> Triple(vehicle.status, TextSecondary, BgLight)
     }
     val segmentLabel = VehicleSegment.labelFor(vehicle.segment)
@@ -81,7 +84,7 @@ fun VehicleDetailSheet(
         sheetState = sheetState,
         containerColor = Surface,
     ) {
-        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)) {
+        Column(modifier = Modifier.padding(horizontal = Dimens.SpaceL, vertical = Dimens.SpaceXxs)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = "${vehicle.brand} ${vehicle.model}",
@@ -91,27 +94,31 @@ fun VehicleDetailSheet(
                     modifier = Modifier.weight(1f),
                 )
                 if (segmentLabel != null) {
-                    Chip(text = segmentLabel, textColor = Primary, background = PrimaryLight)
+                    Chip(text = stringResource(segmentLabel), textColor = Primary, background = PrimaryLight)
                     Spacer(modifier = Modifier.width(6.dp))
                 }
                 Chip(text = statusLabel, textColor = statusColor, background = statusBg)
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpaceXxs))
 
             Text(
-                text = if (distanceLabel != null) "${vehicle.plate} · $distanceLabel uzaklıkta" else vehicle.plate,
+                text = if (distanceLabel != null) {
+                    stringResource(R.string.map_vehicle_plate_with_distance, vehicle.plate, distanceLabel)
+                } else {
+                    vehicle.plate
+                },
                 fontSize = 13.sp,
                 color = TextSecondary,
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpaceM))
 
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(150.dp)
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(Dimens.CornerL))
                     .background(
                         Brush.linearGradient(colors = listOf(typeColor, typeColor.copy(alpha = 0.7f))),
                     ),
@@ -134,21 +141,21 @@ fun VehicleDetailSheet(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpaceM))
 
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 SpecTile(
                     icon = Icons.Outlined.LocalGasStation,
-                    label = "Yakıt",
-                    value = vehicle.fuelPercent?.let { "%$it" } ?: "—",
+                    label = stringResource(R.string.map_spec_fuel_label),
+                    value = vehicle.fuelPercent?.let { stringResource(R.string.map_spec_fuel_percent_value, it) } ?: "—",
                     fuelProgress = vehicle.fuelPercent?.let { it / 100f },
                     modifier = Modifier.weight(1f),
                 )
                 SpecTile(
                     icon = Icons.Outlined.NearMe,
-                    label = "Menzil",
-                    value = vehicle.rangeKm?.let { "~$it km" } ?: "—",
-                    caption = vehicle.rangeKm?.let { "Dolu depo" },
+                    label = stringResource(R.string.map_spec_range_label),
+                    value = vehicle.rangeKm?.let { stringResource(R.string.map_spec_range_value, it) } ?: "—",
+                    caption = vehicle.rangeKm?.let { stringResource(R.string.map_spec_range_caption_full_tank) },
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -158,19 +165,19 @@ fun VehicleDetailSheet(
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 SpecTile(
                     icon = Icons.Outlined.Settings,
-                    label = "Vites",
+                    label = stringResource(R.string.map_spec_transmission_label),
                     value = vehicle.transmission ?: "—",
                     modifier = Modifier.weight(1f),
                 )
                 SpecTile(
                     icon = Icons.Outlined.AirlineSeatReclineNormal,
-                    label = "Koltuk",
-                    value = vehicle.seats?.let { "$it kişi" } ?: "—",
+                    label = stringResource(R.string.map_spec_seats_label),
+                    value = vehicle.seats?.let { stringResource(R.string.common_seat_count, it) } ?: "—",
                     modifier = Modifier.weight(1f),
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpaceM))
 
             // TODO: API şu an sadece pricePerDay döndürüyor; dakikalık/saatlik ücret
             // burada client-side türetiliyor. Backend gerçek pricePerMinute/pricePerHour
@@ -181,13 +188,13 @@ fun VehicleDetailSheet(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text(
-                        text = "₺${formatTl(derivedPricePerMinute)}",
+                        text = stringResource(R.string.common_amount_tl, formatTl(derivedPricePerMinute)),
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary,
                     )
                     Text(
-                        text = " /dk",
+                        text = stringResource(R.string.map_price_per_minute_unit),
                         fontSize = 14.sp,
                         color = TextSecondary,
                         modifier = Modifier.padding(bottom = 3.dp),
@@ -195,14 +202,14 @@ fun VehicleDetailSheet(
                 }
                 Spacer(modifier = Modifier.weight(1f))
                 Text(
-                    text = "Saatlik ₺${formatTl(derivedPricePerHour)}",
+                    text = stringResource(R.string.map_price_per_hour_label, formatTl(derivedPricePerHour)),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = TextSecondary,
                 )
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpaceL))
 
             if (isAvailable) {
                 // v2: doğrudan kilit açma yok; kiralama yalnız rezervasyon sonrası açılır.
@@ -212,23 +219,23 @@ fun VehicleDetailSheet(
                         .fillMaxWidth()
                         .height(52.dp),
                     enabled = canReserve,
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(Dimens.CornerCard),
                     colors = ButtonDefaults.buttonColors(containerColor = Primary),
                 ) {
-                    Text(text = "Rezerve Et", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text(text = stringResource(R.string.map_reserve_button), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 }
             } else {
                 // Meşgul araçlarda aksiyon yok; kullanıcı yalnızca detayı görür.
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
+                        .clip(RoundedCornerShape(Dimens.CornerCard))
                         .background(BgLight)
-                        .padding(vertical = 16.dp),
+                        .padding(vertical = Dimens.SpaceM),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "Araç şu an müsait değil",
+                        text = stringResource(R.string.map_vehicle_unavailable_message),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = TextSecondary,
@@ -236,7 +243,7 @@ fun VehicleDetailSheet(
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpaceXl))
         }
     }
 }
@@ -245,9 +252,9 @@ fun VehicleDetailSheet(
 private fun Chip(text: String, textColor: Color, background: Color) {
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(Dimens.CornerS))
             .background(background)
-            .padding(horizontal = 10.dp, vertical = 4.dp),
+            .padding(horizontal = 10.dp, vertical = Dimens.SpaceXxs),
     ) {
         Text(text = text, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = textColor)
     }
@@ -264,9 +271,9 @@ private fun SpecTile(
 ) {
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(Dimens.CornerM))
             .background(BgLight)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(horizontal = Dimens.SpaceS, vertical = 10.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
@@ -279,7 +286,7 @@ private fun SpecTile(
             Text(text = label, fontSize = 11.sp, color = TextSecondary)
         }
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(Dimens.SpaceXxs))
 
         Text(
             text = value,

@@ -1,5 +1,6 @@
 package com.flowbytestudio.rencar.ui.screens.tripsummary
 
+import androidx.annotation.StringRes
 import com.flowbytestudio.rencar.data.cards.CardDto
 import com.flowbytestudio.rencar.data.rentals.PayRentalResponse
 import com.flowbytestudio.rencar.data.rentals.RentalDto
@@ -19,7 +20,7 @@ enum class IyzicoSubMethod {
 
 data class TripSummaryUiState(
     val isLoading: Boolean = true,
-    val loadError: String? = null,
+    @StringRes val loadError: Int? = null,
     val rental: RentalDto? = null,
 
     // Ödeme bölümü (yalnız COMPLETED + UNPAID iken doldurulur)
@@ -29,7 +30,7 @@ data class TripSummaryUiState(
     val selectedCardId: String? = null,
     val discountCode: String = "",
     val isPaying: Boolean = false,
-    val payError: String? = null,
+    @StringRes val payError: Int? = null,
 
     // İyzico alt-yöntem seçimi + kart formu (yalnız CARD_3DS/CARD_DIRECT'te doldurulur).
     val iyzicoSubMethod: IyzicoSubMethod = IyzicoSubMethod.HOSTED_PAGE,

@@ -1,7 +1,9 @@
 package com.flowbytestudio.rencar.ui.screens.history
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.flowbytestudio.rencar.R
 import com.flowbytestudio.rencar.data.rentals.RentalDto
 import com.flowbytestudio.rencar.data.rentals.RentalRepository
 import com.flowbytestudio.rencar.ui.common.formatTl
@@ -49,7 +51,7 @@ class HistoryViewModel(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            errorMessage = "Kiralamalar yüklenemedi. Lütfen tekrar dene.",
+                            errorMessage = R.string.history_load_error,
                         )
                     }
                 }
@@ -70,7 +72,7 @@ class HistoryViewModel(
                 }
                 .onFailure {
                     _uiState.update {
-                        it.copy(statsErrorMessage = "Aylık özet yüklenemedi.")
+                        it.copy(statsErrorMessage = R.string.history_stats_load_error)
                     }
                 }
         }
@@ -83,11 +85,12 @@ private fun formatDateTime(iso: String): String = runCatching {
     OffsetDateTime.parse(iso).format(displayDateFormatter)
 }.getOrDefault(iso)
 
-private fun planLabel(plan: String): String = when (plan) {
-    "PER_MINUTE" -> "Dakikalık"
-    "HOURLY" -> "Saatlik"
-    "DAILY" -> "Günlük"
-    else -> plan
+@StringRes
+private fun planLabelRes(plan: String): Int? = when (plan) {
+    "PER_MINUTE" -> R.string.common_plan_per_minute
+    "HOURLY" -> R.string.common_plan_hourly
+    "DAILY" -> R.string.common_plan_daily
+    else -> null
 }
 
 private fun RentalDto.toUiModel(): RentalUiModel {
@@ -102,13 +105,15 @@ private fun RentalDto.toUiModel(): RentalUiModel {
         id = id,
         vehicleId = vehicleId,
         vehicleLabel = vehicle?.let { "${it.brand} ${it.model} · ${it.plate}" } ?: vehicleId,
-        planLabel = planLabel(plan),
+        planLabelRes = planLabelRes(plan),
+        planLabelRaw = plan,
         dateLabel = startedAt?.let { formatDateTime(it) } ?: "—",
         priceLabel = totalPrice?.let { "₺${formatTl(it)}" } ?: "—",
         durationMinutes = durationMinutes,
         distanceKm = distanceKm,
         status = statusEnum,
-        statusLabel = if (statusEnum == RentalStatus.OTHER) status else statusEnum.label,
+        statusLabelRes = statusEnum.labelRes,
+        statusLabelRaw = status,
         isUnpaidCompleted = status == "COMPLETED" && paymentStatus == "UNPAID",
     )
 }

@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -45,10 +46,12 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.flowbytestudio.rencar.R
 import com.flowbytestudio.rencar.ui.common.formatTl
 import com.flowbytestudio.rencar.ui.theme.Background
 import com.flowbytestudio.rencar.ui.theme.Danger
 import com.flowbytestudio.rencar.ui.theme.DangerLight
+import com.flowbytestudio.rencar.ui.theme.Dimens
 import com.flowbytestudio.rencar.ui.theme.Primary
 import com.flowbytestudio.rencar.ui.theme.PrimaryLight
 import com.flowbytestudio.rencar.ui.theme.Success
@@ -93,9 +96,9 @@ private fun HistoryContent(
             .fillMaxSize()
             .background(Background),
     ) {
-        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 20.dp)) {
+        Column(modifier = Modifier.padding(horizontal = Dimens.SpaceL, vertical = Dimens.SpaceL)) {
             Text(
-                text = "Kiralamalarım",
+                text = stringResource(R.string.history_title),
                 fontSize = 25.5.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary,
@@ -104,13 +107,17 @@ private fun HistoryContent(
                 Spacer(modifier = Modifier.height(3.dp))
                 if (uiState.statsErrorMessage != null) {
                     Text(
-                        text = uiState.statsErrorMessage,
+                        text = stringResource(uiState.statsErrorMessage),
                         fontSize = 14.5.sp,
                         color = Danger,
                     )
                 } else {
                     Text(
-                        text = "Bu ay ${uiState.tripCountThisMonth} yolculuk · ₺${formatTl(uiState.totalSpentThisMonth)} harcama",
+                        text = stringResource(
+                            R.string.history_monthly_summary,
+                            uiState.tripCountThisMonth,
+                            formatTl(uiState.totalSpentThisMonth),
+                        ),
                         fontSize = 14.5.sp,
                         color = TextSecondary,
                     )
@@ -127,7 +134,7 @@ private fun HistoryContent(
             uiState.rentals.isEmpty() -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
-                        text = uiState.errorMessage ?: "Henüz bir kiralaman yok",
+                        text = stringResource(uiState.errorMessage ?: R.string.history_empty_state),
                         fontSize = 16.5.sp,
                         color = if (uiState.errorMessage != null) Danger else TextSecondary,
                     )
@@ -136,7 +143,7 @@ private fun HistoryContent(
             else -> {
                 LazyColumn(
                     contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(Dimens.SpaceS),
                 ) {
                     items(uiState.rentals, key = { it.id }) { rental ->
                         RentalCard(
@@ -148,7 +155,7 @@ private fun HistoryContent(
                             },
                         )
                     }
-                    item { Spacer(modifier = Modifier.height(16.dp)) }
+                    item { Spacer(modifier = Modifier.height(Dimens.SpaceM)) }
                 }
             }
         }
@@ -164,7 +171,7 @@ private fun RentalCard(rental: RentalUiModel, onClick: (() -> Unit)? = null) {
             } else {
                 Modifier.fillMaxWidth()
             },
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(Dimens.CornerXl),
             color = Surface,
             tonalElevation = 0.dp,
         ) {
@@ -190,7 +197,7 @@ private fun RentalCard(rental: RentalUiModel, onClick: (() -> Unit)? = null) {
                             maxLines = 1,
                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(Dimens.SpaceXs))
                         Column(horizontalAlignment = Alignment.End) {
                             Text(
                                 text = rental.priceLabel,
@@ -216,12 +223,15 @@ private fun RentalCard(rental: RentalUiModel, onClick: (() -> Unit)? = null) {
                     Spacer(modifier = Modifier.height(9.dp))
 
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceXs),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        PlanChip(text = rental.planLabel)
-                        InfoChip(text = "${rental.durationMinutes} dk")
-                        InfoChip(text = "${"%.1f".format(rental.distanceKm)} km")
+                        PlanChip(
+                            text = rental.planLabelRes?.let { stringResource(it) }
+                                ?: rental.planLabelRaw,
+                        )
+                        InfoChip(text = stringResource(R.string.common_minutes_short, rental.durationMinutes))
+                        InfoChip(text = stringResource(R.string.common_distance_km, "%.1f".format(rental.distanceKm)))
                     }
                 }
             }
@@ -231,7 +241,7 @@ private fun RentalCard(rental: RentalUiModel, onClick: (() -> Unit)? = null) {
             status = rental.status,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(bottom = 12.dp, end = 12.dp),
+                .padding(bottom = Dimens.SpaceS, end = Dimens.SpaceS),
         )
     }
 }
@@ -240,9 +250,9 @@ private fun RentalCard(rental: RentalUiModel, onClick: (() -> Unit)? = null) {
 private fun InfoChip(text: String) {
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(6.dp))
+            .clip(RoundedCornerShape(Dimens.CornerXs))
             .background(Background)
-            .padding(horizontal = 8.dp, vertical = 3.dp),
+            .padding(horizontal = Dimens.SpaceXs, vertical = 3.dp),
     ) {
         Text(
             text = text,
@@ -257,9 +267,9 @@ private fun InfoChip(text: String) {
 private fun PlanChip(text: String) {
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(6.dp))
+            .clip(RoundedCornerShape(Dimens.CornerXs))
             .background(PrimaryLight)
-            .padding(horizontal = 8.dp, vertical = 3.dp),
+            .padding(horizontal = Dimens.SpaceXs, vertical = 3.dp),
     ) {
         Text(
             text = text,
@@ -274,12 +284,12 @@ private fun PlanChip(text: String) {
 private fun UnpaidBadge() {
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(6.dp))
+            .clip(RoundedCornerShape(Dimens.CornerXs))
             .background(DangerLight)
-            .padding(horizontal = 8.dp, vertical = 3.dp),
+            .padding(horizontal = Dimens.SpaceXs, vertical = 3.dp),
     ) {
         Text(
-            text = "Ödenmedi",
+            text = stringResource(R.string.history_unpaid_badge),
             fontSize = 12.sp,
             fontWeight = FontWeight.SemiBold,
             color = Danger,
@@ -310,13 +320,13 @@ private fun StatusDot(status: RentalStatus, modifier: Modifier = Modifier) {
         when (status) {
             RentalStatus.COMPLETED -> Icon(
                 imageVector = Icons.Filled.Check,
-                contentDescription = "Tamamlandı",
+                contentDescription = stringResource(R.string.history_status_completed),
                 tint = Color.White,
                 modifier = Modifier.size(11.dp),
             )
             RentalStatus.CANCELLED -> Icon(
                 imageVector = Icons.Filled.Close,
-                contentDescription = "İptal edildi",
+                contentDescription = stringResource(R.string.history_status_cancelled),
                 tint = Color.White,
                 modifier = Modifier.size(11.dp),
             )
@@ -342,7 +352,7 @@ private fun RouteThumbnail(rental: RentalUiModel) {
     Box(
         modifier = Modifier
             .size(84.dp)
-            .clip(RoundedCornerShape(18.dp))
+            .clip(RoundedCornerShape(Dimens.CornerButton))
             .background(Background),
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {

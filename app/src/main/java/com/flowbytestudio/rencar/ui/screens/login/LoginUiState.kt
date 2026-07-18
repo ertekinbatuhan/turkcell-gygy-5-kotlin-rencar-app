@@ -1,5 +1,8 @@
 package com.flowbytestudio.rencar.ui.screens.login
 
+import androidx.annotation.StringRes
+import com.flowbytestudio.rencar.ui.common.AuthLimits
+
 enum class LoginStep { PHONE, OTP }
 
 data class LoginUiState(
@@ -7,8 +10,8 @@ data class LoginUiState(
     val phone: String = "",
     val code: String = "",
     val isLoading: Boolean = false,
-    val error: String? = null,
+    @StringRes val error: Int? = null,
     val isLoggedIn: Boolean = false,
-    val timerSeconds: Int = 60,
+    val timerSeconds: Int = AuthLimits.OTP_RESEND_SECONDS,
     val canResendOtp: Boolean = false
 )

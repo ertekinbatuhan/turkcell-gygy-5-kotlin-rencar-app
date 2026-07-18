@@ -1,6 +1,8 @@
 package com.flowbytestudio.rencar.ui.screens.reservation
 
+import androidx.annotation.StringRes
 import com.flowbytestudio.rencar.data.reservations.ReservationResponse
+import com.flowbytestudio.rencar.data.reservations.ReservationVehicleSummary
 import com.flowbytestudio.rencar.data.vehicles.QuoteResponse
 import com.flowbytestudio.rencar.data.vehicles.VehicleDto
 
@@ -28,7 +30,7 @@ const val DAYS_MAX = 30
 data class ReservationUiState(
     val isLoading: Boolean = true,
     val vehicle: VehicleDto? = null,
-    val loadError: String? = null,
+    @StringRes val loadError: Int? = null,
 
     // Plan + süre seçimi
     val selectedPlan: RentalPlan = RentalPlan.GUNLUK,
@@ -39,13 +41,13 @@ data class ReservationUiState(
     // GET /vehicles/{id}/quote — "Tahmini ücret" dökümü
     val quote: QuoteResponse? = null,
     val isQuoteLoading: Boolean = false,
-    val quoteError: String? = null,
+    @StringRes val quoteError: Int? = null,
 
     val termsAccepted: Boolean = false,
 
     // Seçim durumu: "Rezerve Et" aksiyonu
     val isReserving: Boolean = false,
-    val reserveError: String? = null,
+    @StringRes val reserveError: Int? = null,
 
     // Aktif rezervasyon durumu (bu araç için); null ise seçim durumundayız.
     val reservation: ReservationResponse? = null,
@@ -53,16 +55,16 @@ data class ReservationUiState(
     val isCancellingReservation: Boolean = false,
     val isUnlocking: Boolean = false,
     // Aktif durumda iptal/kilidi-aç aksiyonlarının hatası
-    val actionError: String? = null,
+    @StringRes val actionError: Int? = null,
 
     // Başka bir araçta aktif rezervasyon varsa engelleyici bildirim
     val blockingReservationId: String? = null,
-    val blockingVehicleLabel: String? = null,
+    val blockingVehicle: ReservationVehicleSummary? = null,
     val isCancellingBlocking: Boolean = false,
-    val blockingError: String? = null,
+    @StringRes val blockingError: Int? = null,
 
     // Bilgilendirme (ör. "Rezervasyon süresi doldu")
-    val notice: String? = null,
+    @StringRes val notice: Int? = null,
 
     // Tek seferlik navigasyon tetikleyicileri
     val navigateToHandoverRentalId: String? = null,

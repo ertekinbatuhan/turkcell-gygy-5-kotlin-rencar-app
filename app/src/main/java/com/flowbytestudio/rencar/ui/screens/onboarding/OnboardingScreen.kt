@@ -28,6 +28,7 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -36,8 +37,10 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.flowbytestudio.rencar.R
 import com.flowbytestudio.rencar.ui.theme.BgLight
 import com.flowbytestudio.rencar.ui.theme.BorderLight
+import com.flowbytestudio.rencar.ui.theme.Dimens
 import com.flowbytestudio.rencar.ui.theme.Primary
 import com.flowbytestudio.rencar.ui.theme.PrimaryVariant
 import com.flowbytestudio.rencar.ui.theme.Success
@@ -74,7 +77,7 @@ fun OnboardingScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp),
+                .padding(Dimens.SpaceXl),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.weight(1f))
@@ -99,24 +102,24 @@ fun OnboardingScreen(
                 onClick = onStartClick,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(18.dp),
+                    .height(Dimens.ControlHeight),
+                shape = RoundedCornerShape(Dimens.CornerButton),
                 colors = ButtonDefaults.buttonColors(containerColor = Primary)
             ) {
                 Text(
-                    text = "Hemen Başla",
+                    text = stringResource(R.string.onboarding_start_button),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpaceXl))
 
             Text(
                 text = buildAnnotatedString {
-                    append("Zaten hesabım var · ")
+                    append(stringResource(R.string.onboarding_have_account_prefix))
                     withStyle(style = SpanStyle(color = Primary, fontWeight = FontWeight.Bold)) {
-                        append("Giriş yap")
+                        append(stringResource(R.string.common_login_action))
                     }
                 },
                 fontSize = 14.sp,
@@ -124,7 +127,7 @@ fun OnboardingScreen(
                 modifier = Modifier.noRippleClickable { onLoginClick() }
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpaceM))
         }
     }
 }
@@ -157,25 +160,25 @@ private fun OnboardingPageContent(page: OnboardingPage) {
             }
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(Dimens.SpaceXxl))
 
         Text(
-            text = page.title,
+            text = stringResource(page.title),
             fontSize = 26.sp,
             fontWeight = FontWeight.ExtraBold,
             color = TextPrimary,
             textAlign = TextAlign.Center,
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(Dimens.SpaceS))
 
         Text(
-            text = page.description,
+            text = stringResource(page.description),
             fontSize = 16.sp,
             color = TextSecondary,
             textAlign = TextAlign.Center,
             lineHeight = 24.sp,
-            modifier = Modifier.padding(horizontal = 32.dp)
+            modifier = Modifier.padding(horizontal = Dimens.SpaceXxl)
         )
     }
 }
@@ -243,7 +246,7 @@ private fun MovingCarIllustration() {
 
 @Composable
 private fun OnboardingPageIndicator(pageCount: Int, currentPage: Int) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceXs)) {
         repeat(pageCount) { index ->
             Box(
                 modifier = Modifier

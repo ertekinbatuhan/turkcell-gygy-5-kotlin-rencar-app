@@ -1,5 +1,6 @@
 package com.flowbytestudio.rencar.ui.screens.reservation
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -48,6 +49,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -55,6 +57,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import coil.compose.AsyncImage
+import com.flowbytestudio.rencar.R
 import com.flowbytestudio.rencar.data.vehicles.QuoteResponse
 import com.flowbytestudio.rencar.data.vehicles.VehicleDto
 import com.flowbytestudio.rencar.ui.common.formatTl
@@ -64,6 +67,7 @@ import com.flowbytestudio.rencar.ui.theme.BgLight
 import com.flowbytestudio.rencar.ui.theme.BorderLight
 import com.flowbytestudio.rencar.ui.theme.Danger
 import com.flowbytestudio.rencar.ui.theme.DangerLight
+import com.flowbytestudio.rencar.ui.theme.Dimens
 import com.flowbytestudio.rencar.ui.theme.Primary
 import com.flowbytestudio.rencar.ui.theme.PrimaryLight
 import com.flowbytestudio.rencar.ui.theme.Success
@@ -99,14 +103,18 @@ fun ReservationScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 8.dp),
+                .padding(horizontal = Dimens.SpaceXs, vertical = Dimens.SpaceXs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Geri", tint = TextPrimary)
+                Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.common_back), tint = TextPrimary)
             }
             Text(
-                text = if (uiState.isReservationActive) "Aktif Rezervasyon" else "Rezervasyon",
+                text = if (uiState.isReservationActive) {
+                    stringResource(R.string.reservation_title_active)
+                } else {
+                    stringResource(R.string.reservation_title)
+                },
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = TextPrimary,
@@ -124,23 +132,25 @@ fun ReservationScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(24.dp),
+                            .padding(Dimens.SpaceXl),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {
-                        Text(text = uiState.loadError.orEmpty(), color = Danger, fontSize = 14.sp)
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(text = uiState.loadError?.let { stringResource(it) }.orEmpty(), color = Danger, fontSize = 14.sp)
+                        Spacer(modifier = Modifier.height(Dimens.SpaceS))
                         Button(
                             onClick = viewModel::load,
                             colors = ButtonDefaults.buttonColors(containerColor = Primary),
                         ) {
-                            Text("Tekrar dene")
+                            Text(stringResource(R.string.common_retry))
                         }
                     }
                 }
                 uiState.blockingReservationId != null -> {
                     BlockingReservationNotice(
-                        vehicleLabel = uiState.blockingVehicleLabel,
+                        vehicleLabel = uiState.blockingVehicle?.let {
+                            stringResource(R.string.common_vehicle_summary, it.brand, it.model, it.plate)
+                        },
                         isCancelling = uiState.isCancellingBlocking,
                         errorMessage = uiState.blockingError,
                         onCancel = viewModel::cancelBlockingReservation,
@@ -185,21 +195,21 @@ private fun ReservationContent(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
+                .padding(horizontal = Dimens.SpaceL),
         ) {
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpaceXs))
 
             VehicleSummaryCard(vehicle = vehicle)
 
             if (uiState.isReservationActive) {
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(Dimens.SpaceM))
                 CountdownBanner(remainingSeconds = uiState.remainingSeconds)
             } else if (uiState.notice != null) {
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(Dimens.SpaceM))
                 NoticeBanner(message = uiState.notice)
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpaceM))
 
             PlanSelector(
                 selected = uiState.selectedPlan,
@@ -209,7 +219,7 @@ private fun ReservationContent(
                 onSelect = onPlanSelect,
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpaceM))
 
             PlanDetailsCard(
                 plan = uiState.selectedPlan,
@@ -225,7 +235,7 @@ private fun ReservationContent(
                 onRetryQuote = onRetryQuote,
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpaceM))
 
             Row(verticalAlignment = Alignment.Top) {
                 Checkbox(
@@ -234,7 +244,7 @@ private fun ReservationContent(
                     colors = CheckboxDefaults.colors(checkedColor = Primary),
                 )
                 Text(
-                    text = "Kullanım şartlarını ve kasko/sigorta koşullarını okudum, onaylıyorum.",
+                    text = stringResource(R.string.reservation_terms_checkbox_label),
                     fontSize = 13.sp,
                     color = TextSecondary,
                     modifier = Modifier
@@ -243,7 +253,7 @@ private fun ReservationContent(
                 )
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpaceL))
         }
 
         if (uiState.isReservationActive) {
@@ -270,7 +280,7 @@ private fun ReservationContent(
 private fun SelectionBottomBar(
     enabled: Boolean,
     isReserving: Boolean,
-    errorMessage: String?,
+    @StringRes errorMessage: Int?,
     onReserve: () -> Unit,
 ) {
     Surface(
@@ -278,10 +288,10 @@ private fun SelectionBottomBar(
         color = Surface,
         shadowElevation = 12.dp,
     ) {
-        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp)) {
+        Column(modifier = Modifier.padding(horizontal = Dimens.SpaceL, vertical = 14.dp)) {
             if (errorMessage != null) {
-                Text(text = errorMessage, color = Danger, fontSize = 13.sp)
-                Spacer(modifier = Modifier.height(8.dp))
+                Text(text = stringResource(errorMessage), color = Danger, fontSize = 13.sp)
+                Spacer(modifier = Modifier.height(Dimens.SpaceXs))
             }
             Button(
                 onClick = onReserve,
@@ -289,7 +299,7 @@ private fun SelectionBottomBar(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(Dimens.CornerCard),
                 colors = ButtonDefaults.buttonColors(containerColor = Primary),
             ) {
                 if (isReserving) {
@@ -300,7 +310,7 @@ private fun SelectionBottomBar(
                     )
                 } else {
                     Text(
-                        text = "Rezerve Et ($FREE_RESERVATION_MINUTES dk ücretsiz)",
+                        text = stringResource(R.string.reservation_reserve_button, FREE_RESERVATION_MINUTES),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -315,7 +325,7 @@ private fun ReservationActiveBottomBar(
     canUnlock: Boolean,
     isUnlocking: Boolean,
     isCancelling: Boolean,
-    errorMessage: String?,
+    @StringRes errorMessage: Int?,
     onUnlock: () -> Unit,
     onCancel: () -> Unit,
 ) {
@@ -324,10 +334,10 @@ private fun ReservationActiveBottomBar(
         color = Surface,
         shadowElevation = 12.dp,
     ) {
-        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp)) {
+        Column(modifier = Modifier.padding(horizontal = Dimens.SpaceL, vertical = 14.dp)) {
             if (errorMessage != null) {
-                Text(text = errorMessage, color = Danger, fontSize = 13.sp)
-                Spacer(modifier = Modifier.height(8.dp))
+                Text(text = stringResource(errorMessage), color = Danger, fontSize = 13.sp)
+                Spacer(modifier = Modifier.height(Dimens.SpaceXs))
             }
             Button(
                 onClick = onUnlock,
@@ -335,7 +345,7 @@ private fun ReservationActiveBottomBar(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(Dimens.CornerCard),
                 colors = ButtonDefaults.buttonColors(containerColor = Primary),
             ) {
                 if (isUnlocking) {
@@ -345,9 +355,9 @@ private fun ReservationActiveBottomBar(
                         strokeWidth = 2.dp,
                     )
                 } else {
-                    Icon(Icons.Outlined.LockOpen, contentDescription = null, modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "Kilidi Aç", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    Icon(Icons.Outlined.LockOpen, contentDescription = null, modifier = Modifier.size(Dimens.IconSizeM))
+                    Spacer(modifier = Modifier.width(Dimens.SpaceXs))
+                    Text(text = stringResource(R.string.reservation_unlock_button), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
             Spacer(modifier = Modifier.height(6.dp))
@@ -364,7 +374,7 @@ private fun ReservationActiveBottomBar(
                         strokeWidth = 2.dp,
                     )
                 } else {
-                    Text(text = "Rezervasyonu İptal Et", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text(text = stringResource(R.string.reservation_cancel_button), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
@@ -375,15 +385,15 @@ private fun ReservationActiveBottomBar(
 private fun CountdownBanner(remainingSeconds: Long) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(Dimens.CornerL),
         color = PrimaryLight,
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(Dimens.SpaceM)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Outlined.Timer, contentDescription = null, tint = Primary, modifier = Modifier.size(22.dp))
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
-                    text = "Rezervasyon süreniz",
+                    text = stringResource(R.string.reservation_countdown_title),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = TextPrimary,
@@ -398,7 +408,7 @@ private fun CountdownBanner(remainingSeconds: Long) {
             }
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = "Bu süre dolmadan kilidi açın; aksi halde rezervasyon otomatik düşer.",
+                text = stringResource(R.string.reservation_countdown_hint),
                 fontSize = 12.sp,
                 color = TextSecondary,
             )
@@ -407,19 +417,19 @@ private fun CountdownBanner(remainingSeconds: Long) {
 }
 
 @Composable
-private fun NoticeBanner(message: String) {
+private fun NoticeBanner(@StringRes message: Int) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(Dimens.CornerM),
         color = BgLight,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            modifier = Modifier.padding(horizontal = Dimens.SpaceS, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(Icons.Outlined.Info, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(18.dp))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text = message, fontSize = 13.sp, color = TextSecondary)
+            Spacer(modifier = Modifier.width(Dimens.SpaceXs))
+            Text(text = stringResource(message), fontSize = 13.sp, color = TextSecondary)
         }
     }
 }
@@ -428,13 +438,13 @@ private fun NoticeBanner(message: String) {
 private fun BlockingReservationNotice(
     vehicleLabel: String?,
     isCancelling: Boolean,
-    errorMessage: String?,
+    @StringRes errorMessage: Int?,
     onCancel: () -> Unit,
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(Dimens.SpaceXl),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -444,9 +454,9 @@ private fun BlockingReservationNotice(
             tint = Danger,
             modifier = Modifier.size(48.dp),
         )
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(Dimens.SpaceM))
         Text(
-            text = "Başka bir araçta aktif rezervasyonunuz var",
+            text = stringResource(R.string.reservation_blocking_title),
             fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold,
             color = TextPrimary,
@@ -457,22 +467,22 @@ private fun BlockingReservationNotice(
         }
         Spacer(modifier = Modifier.height(10.dp))
         Text(
-            text = "Bu aracı rezerve edebilmek için önce mevcut rezervasyonunuzu iptal edin.",
+            text = stringResource(R.string.reservation_blocking_body),
             fontSize = 14.sp,
             color = TextSecondary,
         )
         if (errorMessage != null) {
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(text = errorMessage, color = Danger, fontSize = 13.sp)
+            Spacer(modifier = Modifier.height(Dimens.SpaceS))
+            Text(text = stringResource(errorMessage), color = Danger, fontSize = 13.sp)
         }
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(Dimens.SpaceL))
         Button(
             onClick = onCancel,
             enabled = !isCancelling,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp),
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(Dimens.CornerCard),
             colors = ButtonDefaults.buttonColors(containerColor = Danger),
         ) {
             if (isCancelling) {
@@ -482,7 +492,7 @@ private fun BlockingReservationNotice(
                     strokeWidth = 2.dp,
                 )
             } else {
-                Text(text = "Rezervasyonu İptal Et", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                Text(text = stringResource(R.string.reservation_cancel_button), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
         }
     }
@@ -492,22 +502,22 @@ private fun BlockingReservationNotice(
 private fun VehicleSummaryCard(vehicle: VehicleDto) {
     val typeColor = VehicleType.colorFor(vehicle.type)
     val (statusLabel, statusColor, statusBg) = when (vehicle.status.uppercase()) {
-        "AVAILABLE" -> Triple("Müsait", Success, SuccessLight)
-        "RESERVED" -> Triple("Rezerve", Primary, PrimaryLight)
-        "RENTED" -> Triple("Kirada", Danger, DangerLight)
-        "MAINTENANCE" -> Triple("Bakımda", TextSecondary, BgLight)
+        "AVAILABLE" -> Triple(stringResource(R.string.reservation_status_available), Success, SuccessLight)
+        "RESERVED" -> Triple(stringResource(R.string.reservation_status_reserved), Primary, PrimaryLight)
+        "RENTED" -> Triple(stringResource(R.string.reservation_status_rented), Danger, DangerLight)
+        "MAINTENANCE" -> Triple(stringResource(R.string.reservation_status_maintenance), TextSecondary, BgLight)
         else -> Triple(vehicle.status, TextSecondary, BgLight)
     }
     val subtitle = listOfNotNull(
         vehicle.plate,
         vehicle.transmission ?: VehicleType.labelFor(vehicle.type),
-        vehicle.seats?.let { "$it kişi" },
-        segmentLabel(vehicle.segment),
+        vehicle.seats?.let { stringResource(R.string.common_seat_count, it) },
+        segmentLabel(vehicle.segment)?.let { stringResource(it) },
     ).joinToString(" · ")
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(Dimens.CornerL),
         color = Surface,
         shadowElevation = 2.dp,
     ) {
@@ -519,14 +529,14 @@ private fun VehicleSummaryCard(vehicle: VehicleDto) {
                 modifier = Modifier
                     .width(76.dp)
                     .height(56.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(Dimens.CornerM))
                     .background(Brush.linearGradient(colors = listOf(typeColor, typeColor.copy(alpha = 0.7f)))),
                 contentAlignment = Alignment.Center,
             ) {
                 if (vehicle.imageUrl != null) {
                     AsyncImage(
                         model = vehicle.imageUrl,
-                        contentDescription = "${vehicle.brand} ${vehicle.model}",
+                        contentDescription = stringResource(R.string.reservation_vehicle_name, vehicle.brand, vehicle.model),
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize(),
                     )
@@ -535,22 +545,22 @@ private fun VehicleSummaryCard(vehicle: VehicleDto) {
                 }
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(Dimens.SpaceS))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = "${vehicle.brand} ${vehicle.model}", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                Text(text = stringResource(R.string.reservation_vehicle_name, vehicle.brand, vehicle.model), fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(text = subtitle, fontSize = 13.sp, color = TextSecondary)
                 if (vehicle.fuelPercent != null) {
                     Spacer(modifier = Modifier.height(6.dp))
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(RoundedCornerShape(Dimens.CornerS))
                             .background(SuccessLight)
-                            .padding(horizontal = 8.dp, vertical = 3.dp),
+                            .padding(horizontal = Dimens.SpaceXs, vertical = 3.dp),
                     ) {
                         Text(
-                            text = "Yakıt %${vehicle.fuelPercent}",
+                            text = stringResource(R.string.reservation_fuel_percent, vehicle.fuelPercent),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = Success,
@@ -561,7 +571,7 @@ private fun VehicleSummaryCard(vehicle: VehicleDto) {
 
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(Dimens.CornerS))
                     .background(statusBg)
                     .padding(horizontal = 10.dp, vertical = 5.dp),
             ) {
@@ -581,13 +591,13 @@ private fun PlanSelector(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(Dimens.CornerL),
         color = Surface,
         shadowElevation = 2.dp,
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             Text(
-                text = "Kiralama planı",
+                text = stringResource(R.string.reservation_plan_section_title),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = TextPrimary,
@@ -597,22 +607,22 @@ private fun PlanSelector(
 
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 PlanChip(
-                    title = "Dakikalık",
-                    priceLabel = pricePerMinute?.let { "₺${formatTl(it)}/dk" },
+                    title = stringResource(R.string.common_plan_per_minute),
+                    priceLabel = pricePerMinute?.let { stringResource(R.string.common_price_per_minute, formatTl(it)) },
                     selected = selected == RentalPlan.DAKIKALIK,
                     onClick = { onSelect(RentalPlan.DAKIKALIK) },
                     modifier = Modifier.weight(1f),
                 )
                 PlanChip(
-                    title = "Saatlik",
-                    priceLabel = pricePerHour?.let { "₺${formatTl(it)}/sa" },
+                    title = stringResource(R.string.common_plan_hourly),
+                    priceLabel = pricePerHour?.let { stringResource(R.string.reservation_plan_price_per_hour, formatTl(it)) },
                     selected = selected == RentalPlan.SAATLIK,
                     onClick = { onSelect(RentalPlan.SAATLIK) },
                     modifier = Modifier.weight(1f),
                 )
                 PlanChip(
-                    title = "Günlük",
-                    priceLabel = "₺${formatTl(pricePerDay)}",
+                    title = stringResource(R.string.common_plan_daily),
+                    priceLabel = stringResource(R.string.common_amount_tl, formatTl(pricePerDay)),
                     selected = selected == RentalPlan.GUNLUK,
                     onClick = { onSelect(RentalPlan.GUNLUK) },
                     modifier = Modifier.weight(1f),
@@ -632,7 +642,7 @@ private fun PlanChip(
 ) {
     // Fiyatı API'den gelmeyen planlar veri gelene kadar seçilemez.
     val enabled = priceLabel != null
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(Dimens.CornerM)
 
     Column(
         modifier = modifier
@@ -644,7 +654,7 @@ private fun PlanChip(
             )
             .background(if (selected) PrimaryLight else Surface)
             .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier.alpha(0.45f))
-            .padding(vertical = 12.dp),
+            .padding(vertical = Dimens.SpaceS),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
@@ -670,7 +680,7 @@ private fun PlanDetailsCard(
     days: Int,
     quote: QuoteResponse?,
     isQuoteLoading: Boolean,
-    quoteError: String?,
+    @StringRes quoteError: Int?,
     onMinuteChange: (Int) -> Unit,
     onHoursChange: (Int) -> Unit,
     onDaysChange: (Int) -> Unit,
@@ -678,39 +688,51 @@ private fun PlanDetailsCard(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(Dimens.CornerL),
         color = Surface,
         shadowElevation = 2.dp,
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(Dimens.SpaceM)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
-                    text = if (plan == RentalPlan.DAKIKALIK) "Tahmini süre" else "Süre",
+                    text = if (plan == RentalPlan.DAKIKALIK) {
+                        stringResource(R.string.reservation_duration_estimated_label)
+                    } else {
+                        stringResource(R.string.common_duration_label)
+                    },
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = TextPrimary,
                 )
                 when (plan) {
                     RentalPlan.DAKIKALIK -> DurationStepper(
-                        valueText = "$minuteEstimate dk",
+                        valueText = stringResource(R.string.common_minutes_short, minuteEstimate),
                         onDecrement = { onMinuteChange(minuteEstimate - MINUTE_ESTIMATE_STEP) },
                         onIncrement = { onMinuteChange(minuteEstimate + MINUTE_ESTIMATE_STEP) },
                         decrementEnabled = minuteEstimate > MINUTE_ESTIMATE_MIN,
                         incrementEnabled = minuteEstimate < MINUTE_ESTIMATE_MAX,
                     )
                     RentalPlan.SAATLIK -> DurationStepper(
-                        valueText = if (hours == 1) "1 saat" else "$hours saat",
+                        valueText = if (hours == 1) {
+                            stringResource(R.string.reservation_duration_hour_one)
+                        } else {
+                            stringResource(R.string.reservation_duration_hours, hours)
+                        },
                         onDecrement = { onHoursChange(hours - 1) },
                         onIncrement = { onHoursChange(hours + 1) },
                         decrementEnabled = hours > HOURS_MIN,
                         incrementEnabled = hours < HOURS_MAX,
                     )
                     RentalPlan.GUNLUK -> DurationStepper(
-                        valueText = if (days == 1) "1 gün" else "$days gün",
+                        valueText = if (days == 1) {
+                            stringResource(R.string.reservation_duration_day_one)
+                        } else {
+                            stringResource(R.string.reservation_duration_days, days)
+                        },
                         onDecrement = { onDaysChange(days - 1) },
                         onIncrement = { onDaysChange(days + 1) },
                         decrementEnabled = days > DAYS_MIN,
@@ -719,61 +741,61 @@ private fun PlanDetailsCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpaceS))
             HorizontalDivider(color = Background, thickness = 1.dp)
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpaceS))
 
             when {
                 quote != null -> {
-                    PriceRow(label = "Kullanım ücreti", value = "₺${formatTl(quote.usageFee)}")
+                    PriceRow(label = stringResource(R.string.common_usage_fee_label), value = stringResource(R.string.common_amount_tl, formatTl(quote.usageFee)))
                     if (quote.startFee != 0.0) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        PriceRow(label = "Açılış ücreti", value = "₺${formatTl(quote.startFee)}")
+                        Spacer(modifier = Modifier.height(Dimens.SpaceXs))
+                        PriceRow(label = stringResource(R.string.reservation_price_start_fee_label), value = stringResource(R.string.common_amount_tl, formatTl(quote.startFee)))
                     }
                     if (quote.serviceFee != 0.0) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        PriceRow(label = "Servis ücreti", value = "₺${formatTl(quote.serviceFee)}")
+                        Spacer(modifier = Modifier.height(Dimens.SpaceXs))
+                        PriceRow(label = stringResource(R.string.reservation_price_service_fee_label), value = stringResource(R.string.common_amount_tl, formatTl(quote.serviceFee)))
                     }
                     Spacer(modifier = Modifier.height(10.dp))
                     HorizontalDivider(color = Background, thickness = 1.dp)
                     Spacer(modifier = Modifier.height(10.dp))
                     PriceRow(
-                        label = "Tahmini ücret",
-                        value = "~₺${formatTl(quote.estimatedTotal)}",
+                        label = stringResource(R.string.reservation_price_estimated_total_label),
+                        value = stringResource(R.string.reservation_price_estimated_total_value, formatTl(quote.estimatedTotal)),
                         emphasize = true,
                     )
                     if (isQuoteLoading) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(text = "Güncelleniyor…", fontSize = 12.sp, color = TextSecondary)
+                        Spacer(modifier = Modifier.height(Dimens.SpaceXs))
+                        Text(text = stringResource(R.string.reservation_quote_updating), fontSize = 12.sp, color = TextSecondary)
                     }
                 }
                 isQuoteLoading -> {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Primary, strokeWidth = 2.dp)
                         Spacer(modifier = Modifier.width(10.dp))
-                        Text(text = "Tahmini ücret hesaplanıyor…", fontSize = 13.sp, color = TextSecondary)
+                        Text(text = stringResource(R.string.reservation_quote_calculating), fontSize = 13.sp, color = TextSecondary)
                     }
                 }
                 quoteError == null -> {
                     // Rezervasyon aktifken quote çekilmez; ücret kullanıma göre sonda oluşur.
                     Text(
-                        text = "Ücret, kullanımına göre yolculuk sonunda hesaplanır.",
+                        text = stringResource(R.string.reservation_price_calculated_after_trip),
                         fontSize = 13.sp,
                         color = TextSecondary,
                     )
                 }
                 else -> {
                     Text(
-                        text = quoteError,
+                        text = stringResource(quoteError),
                         fontSize = 13.sp,
                         color = Danger,
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(Dimens.SpaceXxs))
                     TextButton(
                         onClick = onRetryQuote,
                         colors = ButtonDefaults.textButtonColors(contentColor = Primary),
                     ) {
-                        Text(text = "Tekrar dene", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Text(text = stringResource(R.string.common_retry), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -850,10 +872,11 @@ private fun PriceRow(label: String, value: String, emphasize: Boolean = false) {
 }
 
 // Fiyat segmenti etiketi (karoseri tipi değil).
-private fun segmentLabel(segment: String?): String? = when (segment?.uppercase()) {
-    "ECONOMY" -> "Ekonomik"
-    "COMFORT" -> "Konfor"
-    "SUV" -> "SUV"
+@StringRes
+private fun segmentLabel(segment: String?): Int? = when (segment?.uppercase()) {
+    "ECONOMY" -> R.string.common_segment_economy
+    "COMFORT" -> R.string.common_segment_comfort
+    "SUV" -> R.string.common_suv
     else -> null
 }
 

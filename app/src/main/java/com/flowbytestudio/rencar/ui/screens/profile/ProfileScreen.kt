@@ -2,6 +2,7 @@ package com.flowbytestudio.rencar.ui.screens.profile
 
 import android.content.Intent
 import android.widget.Toast
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -50,6 +51,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -57,11 +59,13 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.flowbytestudio.rencar.R
 import com.flowbytestudio.rencar.ui.common.formatTl
 import com.flowbytestudio.rencar.ui.theme.Background
 import com.flowbytestudio.rencar.ui.theme.BorderLight
 import com.flowbytestudio.rencar.ui.theme.Danger
 import com.flowbytestudio.rencar.ui.theme.DangerLight
+import com.flowbytestudio.rencar.ui.theme.Dimens
 import com.flowbytestudio.rencar.ui.theme.Primary
 import com.flowbytestudio.rencar.ui.theme.PrimaryLight
 import com.flowbytestudio.rencar.ui.theme.Success
@@ -113,9 +117,9 @@ private fun ProfileContent(
             .fillMaxSize()
             .background(Background)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = Dimens.SpaceM),
     ) {
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(Dimens.SpaceS))
 
         UserHeaderCard(
             name = uiState.name,
@@ -124,11 +128,11 @@ private fun ProfileContent(
             onEditClick = onEditClick,
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(Dimens.SpaceS))
 
         uiState.stats?.let { stats ->
             StatsCard(stats = stats)
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpaceS))
         }
 
         LicenseSection(
@@ -137,37 +141,37 @@ private fun ProfileContent(
             onRefreshSessionClick = onRefreshSessionClick,
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(Dimens.SpaceS))
 
         ReferralCard(onClick = onReferralClick)
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(Dimens.SpaceS))
 
         MenuCard {
             MenuItem(
                 icon = Icons.Outlined.CreditCard,
-                label = "Ödeme yöntemleri",
+                label = stringResource(R.string.profile_menu_payment_methods),
                 onClick = onPaymentMethodsClick,
             )
             MenuDivider()
             MenuItem(
                 icon = Icons.Outlined.Settings,
-                label = "Ayarlar",
+                label = stringResource(R.string.common_settings),
                 onClick = onSettingsClick,
             )
             MenuDivider()
             MenuItem(
                 icon = Icons.AutoMirrored.Outlined.HelpOutline,
-                label = "Yardım & destek",
+                label = stringResource(R.string.profile_menu_help_support),
                 onClick = onSupportClick,
             )
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(Dimens.SpaceS))
 
         LogoutCard(onClick = onLogoutClick)
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(Dimens.SpaceXxl))
     }
 }
 
@@ -181,7 +185,7 @@ private fun UserHeaderCard(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 4.dp, vertical = 8.dp),
+            .padding(horizontal = Dimens.SpaceXxs, vertical = Dimens.SpaceXs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
@@ -228,14 +232,14 @@ private fun UserHeaderCard(
         Box(
             modifier = Modifier
                 .size(38.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(Dimens.CornerM))
                 .background(Surface)
                 .clickable(onClick = onEditClick),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = Icons.Outlined.Edit,
-                contentDescription = "Düzenle",
+                contentDescription = stringResource(R.string.profile_edit_button_content_description),
                 tint = TextSecondary,
                 modifier = Modifier.size(18.dp),
             )
@@ -247,18 +251,18 @@ private fun UserHeaderCard(
 private fun StatsCard(stats: ProfileStats) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(Dimens.CornerXl),
         color = Surface,
         tonalElevation = 0.dp,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            modifier = Modifier.padding(horizontal = Dimens.SpaceM, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
                     .size(40.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(Dimens.CornerM))
                     .background(PrimaryLight),
                 contentAlignment = Alignment.Center,
             ) {
@@ -270,25 +274,25 @@ private fun StatsCard(stats: ProfileStats) {
                 )
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(Dimens.SpaceS))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Bu ay ${stats.tripCount} yolculuk",
+                    text = stringResource(R.string.profile_stats_trips_this_month, stats.tripCount),
                     fontSize = 16.5.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = TextPrimary,
                 )
                 Text(
-                    text = "₺${formatTl(stats.totalSpent)} harcama",
+                    text = stringResource(R.string.profile_stats_total_spent, formatTl(stats.totalSpent)),
                     fontSize = 14.5.sp,
                     color = TextSecondary,
                 )
                 if (stats.totalMinutes > 0 || stats.totalKm > 0.0) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        StatChip(text = "${stats.totalMinutes} dk")
-                        StatChip(text = "${"%.1f".format(stats.totalKm)} km")
+                    Spacer(modifier = Modifier.height(Dimens.SpaceXs))
+                    Row(horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceXs)) {
+                        StatChip(text = stringResource(R.string.common_minutes_short, stats.totalMinutes))
+                        StatChip(text = stringResource(R.string.common_distance_km, "%.1f".format(stats.totalKm)))
                     }
                 }
             }
@@ -300,9 +304,9 @@ private fun StatsCard(stats: ProfileStats) {
 private fun StatChip(text: String) {
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(6.dp))
+            .clip(RoundedCornerShape(Dimens.CornerXs))
             .background(Background)
-            .padding(horizontal = 8.dp, vertical = 3.dp),
+            .padding(horizontal = Dimens.SpaceXs, vertical = 3.dp),
     ) {
         Text(
             text = text,
@@ -330,9 +334,9 @@ private fun LicenseSection(
             icon = Icons.Outlined.HourglassEmpty,
             iconTint = WarningAmber,
             iconBg = WarningAmberLight,
-            title = "Ehliyet incelemede",
-            subtitle = "Onay bekleniyor",
-            badgeText = "İncelemede",
+            title = stringResource(R.string.profile_license_under_review_title),
+            subtitle = stringResource(R.string.profile_license_under_review_subtitle),
+            badgeText = stringResource(R.string.profile_license_under_review_badge),
             badgeColor = WarningAmber,
             badgeBg = WarningAmberLight,
         )
@@ -340,9 +344,9 @@ private fun LicenseSection(
             icon = Icons.Outlined.WarningAmber,
             iconTint = Danger,
             iconBg = DangerLight,
-            title = "Ehliyet reddedildi",
-            subtitle = uiState.rejectReason ?: "Belgelerini tekrar yükle",
-            badgeText = "Tekrar yükle",
+            title = stringResource(R.string.profile_license_rejected_title),
+            subtitle = uiState.rejectReason ?: stringResource(R.string.profile_license_rejected_subtitle_fallback),
+            badgeText = stringResource(R.string.profile_license_rejected_badge_reupload),
             badgeColor = Primary,
             badgeBg = PrimaryLight,
             onClick = onLicenseActionClick,
@@ -351,9 +355,9 @@ private fun LicenseSection(
             icon = Icons.Outlined.Shield,
             iconTint = Primary,
             iconBg = PrimaryLight,
-            title = "Ehliyetini doğrula",
-            subtitle = "Araç kiralamak için ehliyet gerekli",
-            badgeText = "Doğrula",
+            title = stringResource(R.string.profile_license_not_submitted_title),
+            subtitle = stringResource(R.string.profile_license_not_submitted_subtitle),
+            badgeText = stringResource(R.string.profile_license_not_submitted_badge_verify),
             badgeColor = Primary,
             badgeBg = PrimaryLight,
             onClick = onLicenseActionClick,
@@ -366,26 +370,26 @@ private fun LicenseSection(
 
 @Composable
 private fun ApprovedLicenseCard(
-    licenseClass: String,
+    @StringRes licenseClass: Int,
     showRefresh: Boolean,
     isRefreshing: Boolean,
     onRefreshSessionClick: () -> Unit,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(Dimens.CornerXl),
         color = Surface,
         tonalElevation = 0.dp,
     ) {
         Column {
             Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                modifier = Modifier.padding(horizontal = Dimens.SpaceM, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(
                     modifier = Modifier
                         .size(40.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(Dimens.CornerM))
                         .background(SuccessLight),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -397,17 +401,17 @@ private fun ApprovedLicenseCard(
                     )
                 }
 
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(Dimens.SpaceS))
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Ehliyet doğrulandı",
+                        text = stringResource(R.string.profile_license_approved_title),
                         fontSize = 16.5.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = TextPrimary,
                     )
                     Text(
-                        text = licenseClass,
+                        text = stringResource(licenseClass),
                         fontSize = 14.5.sp,
                         color = TextSecondary,
                     )
@@ -415,12 +419,12 @@ private fun ApprovedLicenseCard(
 
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(Dimens.CornerS))
                         .background(SuccessLight)
                         .padding(horizontal = 10.dp, vertical = 5.dp),
                 ) {
                     Text(
-                        text = "Onaylı",
+                        text = stringResource(R.string.profile_license_approved_badge),
                         fontSize = 14.5.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Success,
@@ -434,7 +438,7 @@ private fun ApprovedLicenseCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable(enabled = !isRefreshing, onClick = onRefreshSessionClick)
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                        .padding(horizontal = Dimens.SpaceM, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
@@ -453,7 +457,7 @@ private fun ApprovedLicenseCard(
                         )
                     }
                     Text(
-                        text = "Oturumu yenile",
+                        text = stringResource(R.string.profile_refresh_session_button),
                         fontSize = 14.5.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Primary,
@@ -479,7 +483,7 @@ private fun LicenseStatusCard(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(Dimens.CornerXl),
         color = Surface,
         tonalElevation = 0.dp,
     ) {
@@ -487,13 +491,13 @@ private fun LicenseStatusCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .padding(horizontal = Dimens.SpaceM, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
                     .size(40.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(Dimens.CornerM))
                     .background(iconBg),
                 contentAlignment = Alignment.Center,
             ) {
@@ -505,7 +509,7 @@ private fun LicenseStatusCard(
                 )
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(Dimens.SpaceS))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -527,7 +531,7 @@ private fun LicenseStatusCard(
 
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(Dimens.CornerS))
                     .background(badgeBg)
                     .padding(horizontal = 10.dp, vertical = 5.dp),
             ) {
@@ -547,20 +551,20 @@ private fun ReferralCard(onClick: () -> Unit) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(Dimens.CornerXl))
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(Dimens.CornerXl),
         color = Surface,
         tonalElevation = 0.dp,
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(Dimens.SpaceM),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
                     .size(40.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(Dimens.CornerM))
                     .background(PrimaryLight),
                 contentAlignment = Alignment.Center,
             ) {
@@ -572,17 +576,17 @@ private fun ReferralCard(onClick: () -> Unit) {
                 )
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(Dimens.SpaceS))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Davet et · ₺50 kazan",
+                    text = stringResource(R.string.profile_referral_title),
                     fontSize = 16.5.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = TextPrimary,
                 )
                 Text(
-                    text = "Davet ettiğin arkadaş ilk yolculuğunu tamamlayınca ₺50 senin.",
+                    text = stringResource(R.string.profile_referral_subtitle),
                     fontSize = 13.5.sp,
                     color = TextSecondary,
                 )
@@ -601,7 +605,7 @@ private fun ReferralCard(onClick: () -> Unit) {
 private fun MenuCard(content: @Composable ColumnScope.() -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(Dimens.CornerXl),
         color = Surface,
         tonalElevation = 0.dp,
     ) {
@@ -621,9 +625,9 @@ private fun MenuItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 16.dp),
+            .padding(horizontal = Dimens.SpaceM, vertical = Dimens.SpaceM),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceS),
     ) {
         Icon(
             imageVector = icon,
@@ -641,7 +645,7 @@ private fun MenuItem(
             imageVector = Icons.Outlined.ChevronRight,
             contentDescription = null,
             tint = BorderLight,
-            modifier = Modifier.size(20.dp),
+            modifier = Modifier.size(Dimens.IconSizeM),
         )
     }
 }
@@ -659,7 +663,7 @@ private fun MenuDivider() {
 private fun LogoutCard(onClick: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(Dimens.CornerXl),
         color = Surface,
         tonalElevation = 0.dp,
     ) {
@@ -675,11 +679,11 @@ private fun LogoutCard(onClick: () -> Unit) {
                 imageVector = Icons.AutoMirrored.Outlined.Logout,
                 contentDescription = null,
                 tint = Danger,
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(Dimens.IconSizeM),
             )
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(Dimens.SpaceXs))
             Text(
-                text = "Çıkış yap",
+                text = stringResource(R.string.profile_logout_button),
                 fontSize = 16.5.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Danger,
