@@ -62,6 +62,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -71,12 +72,14 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.flowbytestudio.rencar.R
 import com.flowbytestudio.rencar.data.geocoding.GeocodingResult
 import com.flowbytestudio.rencar.data.vehicles.VehicleDto
 import com.flowbytestudio.rencar.ui.common.formatTl
 import com.flowbytestudio.rencar.ui.theme.Background
 import com.flowbytestudio.rencar.ui.theme.Danger
 import com.flowbytestudio.rencar.ui.theme.DarkRencarColors
+import com.flowbytestudio.rencar.ui.theme.Dimens
 import com.flowbytestudio.rencar.ui.theme.LocalRencarColors
 import com.flowbytestudio.rencar.ui.theme.Primary
 import com.flowbytestudio.rencar.ui.theme.PrimaryVariant
@@ -187,6 +190,9 @@ fun MapScreen(
     val isDarkTheme = LocalRencarColors.current == DarkRencarColors
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    val locationNotFoundMessage = stringResource(R.string.map_snackbar_location_not_found)
+    val locationNotFoundCheckPermissionMessage = stringResource(R.string.map_snackbar_location_not_found_check_permission)
+    val noVehicleFoundMessage = stringResource(R.string.map_snackbar_no_vehicle_found)
     val sheetState = rememberModalBottomSheetState()
     var selectedVehicle by remember { mutableStateOf<VehicleDto?>(null) }
     // Filtre kartının gerçek yüksekliği: segment/tip satırlarının sayısına göre
@@ -351,8 +357,8 @@ fun MapScreen(
                     val available = vehicle.status.equals("AVAILABLE", ignoreCase = true)
                     // Marker balonu: varsa dakikalık fiyat, yoksa günlük.
                     val priceText = vehicle.pricePerMinute
-                        ?.let { "₺${formatTl(it)}/dk" }
-                        ?: "₺${formatTl(vehicle.pricePerDay)}"
+                        ?.let { context.getString(R.string.common_price_per_minute, formatTl(it)) }
+                        ?: context.getString(R.string.common_amount_tl, formatTl(vehicle.pricePerDay))
                     // status'ü id'ye katarak müsait->meşgul geçişinde marker görselini tazeleriz.
                     val imageId = "vehicle-marker-${vehicle.id}-${if (available) "a" else "b"}"
                     style.addImage(
@@ -440,8 +446,8 @@ fun MapScreen(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(top = 16.dp),
+                .padding(horizontal = Dimens.SpaceL)
+                .padding(top = Dimens.SpaceM),
         ) {
             SearchBar(
                 query = uiState.searchQuery,
@@ -459,37 +465,39 @@ fun MapScreen(
 
             when (val banner = uiState.banner) {
                 is MapBanner.ActiveRental -> {
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(Dimens.SpaceS))
                     StateBanner(
-                        title = "Kiralama aktif" +
-                            (banner.currentCost?.let { " · ₺${formatTl(it)}" } ?: ""),
+                        title = stringResource(R.string.common_rental_active) +
+                            (banner.currentCost?.let {
+                                stringResource(R.string.map_banner_rental_active_cost_suffix, formatTl(it))
+                            } ?: ""),
                         subtitle = banner.vehicleName,
                         dotColor = Success,
-                        actionLabel = "Devam et",
+                        actionLabel = stringResource(R.string.map_banner_rental_active_action),
                         actionColor = Success,
                         onClick = { onNavigateToActiveRental(banner.rentalId) },
                     )
                 }
 
                 is MapBanner.PreparingRental -> {
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(Dimens.SpaceS))
                     StateBanner(
-                        title = "Araç hazırlanıyor · fotoğrafları tamamla",
+                        title = stringResource(R.string.map_banner_preparing_title),
                         subtitle = banner.vehicleName,
                         dotColor = PrimaryVariant,
-                        actionLabel = "Tamamla",
+                        actionLabel = stringResource(R.string.map_banner_preparing_action),
                         actionColor = PrimaryVariant,
                         onClick = { onNavigateToHandover(banner.rentalId) },
                     )
                 }
 
                 is MapBanner.ActiveReservation -> {
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(Dimens.SpaceS))
                     StateBanner(
-                        title = "Rezervasyon aktif · kalan ${formatMmSs(banner.remainingSeconds)}",
+                        title = stringResource(R.string.map_banner_reservation_title, formatMmSs(banner.remainingSeconds)),
                         subtitle = banner.vehicleName,
                         dotColor = PrimaryVariant,
-                        actionLabel = "Görüntüle",
+                        actionLabel = stringResource(R.string.map_banner_reservation_action),
                         actionColor = PrimaryVariant,
                         onClick = { onNavigateToReservation(banner.vehicleId) },
                     )
@@ -498,9 +506,10 @@ fun MapScreen(
                 null -> Unit
             }
 
-            if (uiState.error != null) {
-                Spacer(modifier = Modifier.height(12.dp))
-                ErrorBanner(message = uiState.error.orEmpty(), onRetry = viewModel::loadVehicles)
+            val errorRes = uiState.error
+            if (errorRes != null) {
+                Spacer(modifier = Modifier.height(Dimens.SpaceS))
+                ErrorBanner(message = stringResource(errorRes), onRetry = viewModel::loadVehicles)
             }
         }
 
@@ -511,17 +520,17 @@ fun MapScreen(
                 if (map != null && location != null) {
                     map.easeCamera(CameraUpdateFactory.newLatLngZoom(location, 15.0), 600)
                 } else {
-                    scope.launch { snackbarHostState.showSnackbar("Konumunuz bulunamadı.") }
+                    scope.launch { snackbarHostState.showSnackbar(locationNotFoundMessage) }
                 }
             },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(bottom = bottomCardHeight + 16.dp, end = 20.dp)
+                .padding(bottom = bottomCardHeight + Dimens.SpaceM, end = Dimens.SpaceL)
                 .size(46.dp)
                 .clip(CircleShape)
                 .background(Surface),
         ) {
-            Icon(Icons.Filled.MyLocation, contentDescription = "Konumuma git", tint = Primary)
+            Icon(Icons.Filled.MyLocation, contentDescription = stringResource(R.string.map_my_location_content_description), tint = Primary)
         }
 
         BottomVehiclesCard(
@@ -539,11 +548,11 @@ fun MapScreen(
             onFindNearestClick = {
                 val location = myLocation
                 if (location == null) {
-                    scope.launch { snackbarHostState.showSnackbar("Konumunuz bulunamadı, konum iznini kontrol edin.") }
+                    scope.launch { snackbarHostState.showSnackbar(locationNotFoundCheckPermissionMessage) }
                 } else {
                     val nearest = viewModel.findNearestVehicle(location.latitude, location.longitude)
                     if (nearest == null) {
-                        scope.launch { snackbarHostState.showSnackbar("Uygun araç bulunamadı.") }
+                        scope.launch { snackbarHostState.showSnackbar(noVehicleFoundMessage) }
                     } else {
                         mapLibreMap?.easeCamera(
                             CameraUpdateFactory.newLatLngZoom(LatLng(nearest.latitude, nearest.longitude), 15.0),
@@ -690,10 +699,11 @@ private fun focusCameraOnVehicles(map: MapLibreMap?, vehicles: List<VehicleDto>)
     map.easeCamera(CameraUpdateFactory.newLatLngBounds(bounds, 120), 700)
 }
 
+@Composable
 private fun formatDistanceMeters(meters: Double): String = if (meters < 1000) {
-    "${meters.toInt()} m"
+    stringResource(R.string.map_distance_meters, meters.toInt())
 } else {
-    "%.1f km".format(meters / 1000)
+    stringResource(R.string.common_distance_km, "%.1f".format(meters / 1000))
 }
 
 private fun updateMeMarker(style: Style, myLocation: LatLng?) {
@@ -730,21 +740,21 @@ private fun SearchBar(
     Column(modifier = Modifier.fillMaxWidth()) {
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(Dimens.CornerL),
             color = Surface,
             shadowElevation = 3.dp,
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                    .padding(horizontal = Dimens.SpaceM, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.Outlined.Search, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(20.dp))
+                Icon(Icons.Outlined.Search, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(Dimens.IconSizeM))
                 Spacer(modifier = Modifier.width(10.dp))
                 Box(modifier = Modifier.weight(1f)) {
                     if (query.isEmpty()) {
-                        Text(text = "Nereden araç alacaksın?", fontSize = 15.sp, color = TextSecondary)
+                        Text(text = stringResource(R.string.map_search_placeholder), fontSize = 15.sp, color = TextSecondary)
                     }
                     BasicTextField(
                         value = query,
@@ -756,11 +766,11 @@ private fun SearchBar(
                     )
                 }
                 if (isSearching) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = Primary)
+                    CircularProgressIndicator(modifier = Modifier.size(Dimens.IconSizeS), strokeWidth = 2.dp, color = Primary)
                 } else if (query.isNotEmpty()) {
                     Icon(
                         imageVector = Icons.Filled.Close,
-                        contentDescription = "Aramayı temizle",
+                        contentDescription = stringResource(R.string.map_search_clear_content_description),
                         tint = TextSecondary,
                         modifier = Modifier.size(18.dp).clickable { onQueryChange("") },
                     )
@@ -769,10 +779,10 @@ private fun SearchBar(
         }
 
         if (results.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpaceXs))
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(Dimens.CornerL),
                 color = Surface,
                 shadowElevation = 3.dp,
             ) {
@@ -782,7 +792,7 @@ private fun SearchBar(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { onResultClick(result) }
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                                .padding(horizontal = Dimens.SpaceM, vertical = Dimens.SpaceS),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Icon(
@@ -824,10 +834,10 @@ private fun StateBanner(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(Dimens.CornerCard))
             .background(TextPrimary)
             .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .padding(horizontal = 14.dp, vertical = Dimens.SpaceS),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
@@ -836,7 +846,7 @@ private fun StateBanner(
                 .clip(CircleShape)
                 .background(dotColor),
         )
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(Dimens.SpaceXs))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
@@ -852,7 +862,7 @@ private fun StateBanner(
                 )
             }
         }
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(Dimens.SpaceXs))
         Text(
             text = actionLabel,
             fontSize = 13.sp,
@@ -871,20 +881,20 @@ private fun formatMmSs(totalSeconds: Long): String {
 private fun ErrorBanner(message: String, onRetry: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(Dimens.CornerM),
         color = Surface,
         shadowElevation = 2.dp,
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = Dimens.SpaceM, vertical = Dimens.SpaceS),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(text = message, fontSize = 13.sp, color = Danger, modifier = Modifier.weight(1f))
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(Dimens.SpaceXs))
             Text(
-                text = "Tekrar dene",
+                text = stringResource(R.string.common_retry),
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Primary,
@@ -904,20 +914,20 @@ private fun BottomVehiclesCard(
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        shape = RoundedCornerShape(topStart = Dimens.CornerXxl, topEnd = Dimens.CornerXxl),
         color = Surface,
         shadowElevation = 8.dp,
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
+        Column(modifier = Modifier.padding(Dimens.SpaceL)) {
             Text(
-                text = "Yakınında ${uiState.availableFilteredVehicles.size} araç",
+                text = stringResource(R.string.map_nearby_vehicle_count, uiState.availableFilteredVehicles.size),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary,
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpaceXxs))
             Text(
-                text = "Haritadaki müsait araçları görüntülüyorsun",
+                text = stringResource(R.string.map_nearby_vehicles_subtitle),
                 fontSize = 13.sp,
                 color = TextSecondary,
             )
@@ -929,16 +939,16 @@ private fun BottomVehiclesCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceXs),
             ) {
                 SegmentTab(
-                    label = "Tümü",
+                    label = stringResource(R.string.map_filter_all),
                     selected = uiState.selectedSegment == null,
                     onClick = { onSegmentSelected(null) },
                 )
                 VehicleSegment.entries.forEach { segment ->
                     SegmentTab(
-                        label = segment.label,
+                        label = stringResource(segment.label),
                         selected = uiState.selectedSegment == segment.apiValue,
                         onClick = { onSegmentSelected(segment.apiValue) },
                     )
@@ -952,17 +962,17 @@ private fun BottomVehiclesCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceXs),
             ) {
                 TypeChip(
-                    label = "Tümü",
+                    label = stringResource(R.string.map_filter_all),
                     dotColor = Primary,
                     selected = uiState.selectedType == null,
                     onClick = { onTypeSelected(null) },
                 )
                 uiState.availableTypes.forEach { type ->
                     TypeChip(
-                        label = VehicleType.labelFor(type),
+                        label = VehicleType.labelFor(type)?.let { stringResource(it) } ?: type,
                         dotColor = VehicleType.colorFor(type),
                         selected = uiState.selectedType == type,
                         onClick = { onTypeSelected(type) },
@@ -970,19 +980,19 @@ private fun BottomVehiclesCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpaceM))
 
             Button(
                 onClick = onFindNearestClick,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(Dimens.CornerCard),
                 colors = ButtonDefaults.buttonColors(containerColor = Primary),
             ) {
                 Icon(Icons.Outlined.NearMe, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "En Yakın Aracı Bul", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Spacer(modifier = Modifier.width(Dimens.SpaceXs))
+                Text(text = stringResource(R.string.map_find_nearest_vehicle_button), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             }
         }
     }
@@ -996,7 +1006,7 @@ private fun SegmentTab(
 ) {
     Surface(
         modifier = Modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(Dimens.CornerXl),
         color = if (selected) Primary else Background,
     ) {
         Text(
@@ -1004,7 +1014,7 @@ private fun SegmentTab(
             fontSize = 13.sp,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
             color = if (selected) Color.White else TextSecondary,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 9.dp),
+            modifier = Modifier.padding(horizontal = Dimens.SpaceM, vertical = 9.dp),
         )
     }
 }
@@ -1018,7 +1028,7 @@ private fun TypeChip(
 ) {
     Surface(
         modifier = Modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(Dimens.CornerXl),
         color = if (selected) dotColor.copy(alpha = 0.14f) else Background,
     ) {
         Row(

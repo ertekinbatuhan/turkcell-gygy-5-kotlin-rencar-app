@@ -28,6 +28,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -36,6 +37,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.flowbytestudio.rencar.R
 import com.flowbytestudio.rencar.ui.theme.*
 import java.io.File
 
@@ -79,22 +81,22 @@ fun LicenseUploadScreen(
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Geri",
+                            contentDescription = stringResource(R.string.common_back),
                             tint = TextPrimary,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(Dimens.IconSizeM)
                         )
                     }
                     Spacer(modifier = Modifier.width(14.dp))
                 }
                 Column {
                     Text(
-                        text = "Ehliyet doğrulama",
+                        text = stringResource(R.string.license_title),
                         fontSize = 19.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
                     )
                     Text(
-                        text = "Kiralamadan önce tek seferlik",
+                        text = stringResource(R.string.license_subtitle),
                         fontSize = 12.5.sp,
                         color = TextSecondary
                     )
@@ -132,11 +134,11 @@ fun LicenseUploadScreen(
 @Composable
 private fun StepProgressBar(step: LicenseUploadStep, modifier: Modifier = Modifier) {
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        StepIndicator(index = 1, label = "Ehliyet", isActive = step.ordinal >= 0, isCurrent = step == LicenseUploadStep.LICENSE)
+        StepIndicator(index = 1, label = stringResource(R.string.license_step_license), isActive = step.ordinal >= 0, isCurrent = step == LicenseUploadStep.LICENSE)
         StepConnector()
-        StepIndicator(index = 2, label = "Selfie", isActive = step.ordinal >= 1, isCurrent = step == LicenseUploadStep.SELFIE)
+        StepIndicator(index = 2, label = stringResource(R.string.license_selfie_label), isActive = step.ordinal >= 1, isCurrent = step == LicenseUploadStep.SELFIE)
         StepConnector()
-        StepIndicator(index = 3, label = "Onay", isActive = step.ordinal >= 2, isCurrent = step == LicenseUploadStep.CONFIRM)
+        StepIndicator(index = 3, label = stringResource(R.string.license_step_confirm), isActive = step.ordinal >= 2, isCurrent = step == LicenseUploadStep.CONFIRM)
     }
 }
 
@@ -190,17 +192,17 @@ private fun ColumnScope.LicenseStepContent(
         modifier = Modifier
             .weight(1f)
             .padding(horizontal = 18.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(Dimens.SpaceS),
     ) {
         PhotoPickerCard(
-            label = "Ehliyet ön yüz",
+            label = stringResource(R.string.license_front_side_label),
             uri = uiState.frontUri,
             imageUrl = null,
             context = context,
             onImagePicked = onFrontPicked,
         )
         PhotoPickerCard(
-            label = "Ehliyet arka yüz",
+            label = stringResource(R.string.license_back_side_label),
             uri = uiState.backUri,
             imageUrl = null,
             context = context,
@@ -210,15 +212,15 @@ private fun ColumnScope.LicenseStepContent(
         InfoBanner()
 
         if (uiState.error != null) {
-            Text(text = uiState.error, color = Danger, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+            Text(text = stringResource(uiState.error), color = Danger, fontSize = 13.sp, modifier = Modifier.padding(top = Dimens.SpaceXxs))
         }
     }
 
     BottomActionArea(
-        primaryText = "Devam Et",
+        primaryText = stringResource(R.string.license_continue_button),
         primaryEnabled = uiState.frontUri != null && uiState.backUri != null,
         onPrimaryClick = onNext,
-        secondaryText = "Daha sonra tamamla",
+        secondaryText = stringResource(R.string.license_complete_later_button),
         onSecondaryClick = onSkip,
     )
 }
@@ -235,10 +237,10 @@ private fun ColumnScope.SelfieStepContent(
         modifier = Modifier
             .weight(1f)
             .padding(horizontal = 18.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(Dimens.SpaceS),
     ) {
         Text(
-            text = "Selfie",
+            text = stringResource(R.string.license_selfie_label),
             fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
             color = TextPrimary,
@@ -253,7 +255,7 @@ private fun ColumnScope.SelfieStepContent(
 
         if (uiState.selfieUrl != null && uiState.selfieUri == null) {
             Text(
-                text = "Profil fotoğrafın otomatik olarak kullanıldı. Değiştirmek için dokun.",
+                text = stringResource(R.string.license_selfie_auto_used_hint),
                 fontSize = 12.5.sp,
                 color = TextSecondary,
                 textAlign = TextAlign.Center,
@@ -264,15 +266,15 @@ private fun ColumnScope.SelfieStepContent(
         InfoBanner()
 
         if (uiState.error != null) {
-            Text(text = uiState.error, color = Danger, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+            Text(text = stringResource(uiState.error), color = Danger, fontSize = 13.sp, modifier = Modifier.padding(top = Dimens.SpaceXxs))
         }
     }
 
     BottomActionArea(
-        primaryText = "Devam Et",
+        primaryText = stringResource(R.string.license_continue_button),
         primaryEnabled = uiState.hasSelfie,
         onPrimaryClick = onNext,
-        secondaryText = "Daha sonra tamamla",
+        secondaryText = stringResource(R.string.license_complete_later_button),
         onSecondaryClick = onSkip,
     )
 }
@@ -287,7 +289,7 @@ private fun ColumnScope.ConfirmStepContent(
         modifier = Modifier
             .weight(1f)
             .fillMaxWidth()
-            .padding(horizontal = 24.dp),
+            .padding(horizontal = Dimens.SpaceXl),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -300,37 +302,37 @@ private fun ColumnScope.ConfirmStepContent(
         ) {
             Icon(imageVector = Icons.Filled.Check, contentDescription = null, tint = Success, modifier = Modifier.size(34.dp))
         }
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(Dimens.SpaceL))
         Text(
-            text = "Göndermeye hazırsın",
+            text = stringResource(R.string.license_confirm_ready_title),
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
             color = TextPrimary,
             textAlign = TextAlign.Center,
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(Dimens.SpaceXs))
         Text(
-            text = "Ehliyet ön/arka yüz ve selfie fotoğrafların incelemeye gönderilecek.",
+            text = stringResource(R.string.license_confirm_ready_body),
             fontSize = 14.sp,
             color = TextSecondary,
             lineHeight = 20.sp,
             textAlign = TextAlign.Center,
         )
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(Dimens.SpaceL))
         InfoBanner()
 
         if (uiState.error != null) {
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(text = uiState.error, color = Danger, fontSize = 13.sp, textAlign = TextAlign.Center)
+            Spacer(modifier = Modifier.height(Dimens.SpaceS))
+            Text(text = stringResource(uiState.error), color = Danger, fontSize = 13.sp, textAlign = TextAlign.Center)
         }
     }
 
     BottomActionArea(
-        primaryText = "Ehliyeti Gönder",
+        primaryText = stringResource(R.string.license_submit_button),
         primaryEnabled = !uiState.isSubmitting,
         isLoading = uiState.isSubmitting,
         onPrimaryClick = onSubmit,
-        secondaryText = "Daha sonra tamamla",
+        secondaryText = stringResource(R.string.license_complete_later_button),
         onSecondaryClick = onSkip,
     )
 }
@@ -341,9 +343,9 @@ private fun InfoBanner() {
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(Dimens.CornerCard))
             .background(BgLight)
-            .padding(horizontal = 13.dp, vertical = 12.dp),
+            .padding(horizontal = 13.dp, vertical = Dimens.SpaceS),
     ) {
         Icon(
             imageVector = Icons.Outlined.Info,
@@ -352,9 +354,7 @@ private fun InfoBanner() {
             modifier = Modifier.size(18.dp),
         )
         Text(
-            text = buildString {
-                append("Bilgilerin güvenle saklanır. Doğrulama genelde birkaç dakika sürer.")
-            },
+            text = stringResource(R.string.license_info_banner_text),
             fontSize = 12.sp,
             color = TextSecondary,
             lineHeight = 18.sp,
@@ -377,9 +377,9 @@ private fun ColumnScope.BottomActionArea(
     ) {
         Button(
             onClick = onPrimaryClick,
-            modifier = Modifier.fillMaxWidth().height(56.dp),
+            modifier = Modifier.fillMaxWidth().height(Dimens.ControlHeight),
             enabled = primaryEnabled,
-            shape = RoundedCornerShape(18.dp),
+            shape = RoundedCornerShape(Dimens.CornerButton),
             colors = ButtonDefaults.buttonColors(containerColor = Primary),
         ) {
             if (isLoading) {
@@ -402,7 +402,7 @@ private fun ColumnScope.BottomActionArea(
                 textAlign = TextAlign.Center,
             )
         }
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(Dimens.SpaceXs))
     }
 }
 
@@ -465,28 +465,28 @@ private fun rememberImagePickerState(
 private fun ImagePickerBottomSheet(state: ImagePickerState) {
     if (state.showPicker.value) {
         ModalBottomSheet(onDismissRequest = { state.showPicker.value = false }) {
-            Column(modifier = Modifier.padding(bottom = 24.dp)) {
+            Column(modifier = Modifier.padding(bottom = Dimens.SpaceXl)) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable(onClick = state.onCameraClick)
-                        .padding(horizontal = 24.dp, vertical = 16.dp),
+                        .padding(horizontal = Dimens.SpaceXl, vertical = Dimens.SpaceM),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(imageVector = Icons.Outlined.CameraAlt, contentDescription = null, tint = Primary)
                     Spacer(modifier = Modifier.width(14.dp))
-                    Text(text = "Kamera ile çek", fontSize = 16.sp, color = TextPrimary)
+                    Text(text = stringResource(R.string.license_picker_camera_option), fontSize = 16.sp, color = TextPrimary)
                 }
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable(onClick = state.onGalleryClick)
-                        .padding(horizontal = 24.dp, vertical = 16.dp),
+                        .padding(horizontal = Dimens.SpaceXl, vertical = Dimens.SpaceM),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(imageVector = Icons.Outlined.PhotoLibrary, contentDescription = null, tint = Primary)
                     Spacer(modifier = Modifier.width(14.dp))
-                    Text(text = "Galeriden seç", fontSize = 16.sp, color = TextPrimary)
+                    Text(text = stringResource(R.string.license_picker_gallery_option), fontSize = 16.sp, color = TextPrimary)
                 }
             }
         }
@@ -512,18 +512,18 @@ private fun PhotoPickerCard(
             fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
             color = TextPrimary,
-            modifier = Modifier.padding(bottom = 8.dp),
+            modifier = Modifier.padding(bottom = Dimens.SpaceXs),
         )
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(heightDp.dp)
-                .clip(RoundedCornerShape(18.dp))
+                .clip(RoundedCornerShape(Dimens.CornerButton))
                 .background(Surface)
                 .border(
                     width = if (!hasImage) 2.dp else 0.dp,
                     color = BorderColor,
-                    shape = RoundedCornerShape(18.dp),
+                    shape = RoundedCornerShape(Dimens.CornerButton),
                 )
                 .clickable { pickerState.showPicker.value = true },
             contentAlignment = Alignment.Center,
@@ -533,15 +533,15 @@ private fun PhotoPickerCard(
                     model = displayUri ?: imageUrl,
                     contentDescription = label,
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(18.dp)),
+                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(Dimens.CornerButton)),
                 )
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(8.dp)
+                        .padding(Dimens.SpaceXs)
                         .clip(RoundedCornerShape(7.dp))
                         .background(Success)
-                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                        .padding(horizontal = Dimens.SpaceXs, vertical = 3.dp),
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
@@ -550,8 +550,8 @@ private fun PhotoPickerCard(
                             tint = Color.White,
                             modifier = Modifier.size(12.dp),
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = "Yüklendi", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        Spacer(modifier = Modifier.width(Dimens.SpaceXxs))
+                        Text(text = stringResource(R.string.license_uploaded_badge), fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     }
                 }
             } else {
@@ -563,7 +563,7 @@ private fun PhotoPickerCard(
                         modifier = Modifier.size(28.dp),
                     )
                     Spacer(modifier = Modifier.height(7.dp))
-                    Text(text = "Çek veya yükle", fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, color = TextSecondary)
+                    Text(text = stringResource(R.string.license_capture_or_upload_hint), fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, color = TextSecondary)
                 }
             }
         }
@@ -601,7 +601,7 @@ private fun SelfiePickerAvatar(
             if (hasImage) {
                 AsyncImage(
                     model = displayUri ?: imageUrl,
-                    contentDescription = "Selfie",
+                    contentDescription = stringResource(R.string.license_selfie_label),
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize().clip(CircleShape),
                 )
@@ -629,7 +629,7 @@ private fun SelfiePickerAvatar(
                         modifier = Modifier.size(30.dp),
                     )
                     Spacer(modifier = Modifier.height(6.dp))
-                    Text(text = "Çek veya yükle", fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold, color = TextSecondary)
+                    Text(text = stringResource(R.string.license_capture_or_upload_hint), fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold, color = TextSecondary)
                 }
             }
         }

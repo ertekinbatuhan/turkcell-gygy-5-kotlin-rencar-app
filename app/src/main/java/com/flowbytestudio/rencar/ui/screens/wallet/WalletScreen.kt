@@ -1,5 +1,6 @@
 package com.flowbytestudio.rencar.ui.screens.wallet
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -56,6 +57,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -64,12 +66,14 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.flowbytestudio.rencar.R
 import com.flowbytestudio.rencar.ui.common.formatTl
 import com.flowbytestudio.rencar.ui.theme.Background
 import com.flowbytestudio.rencar.ui.theme.BgLight
 import com.flowbytestudio.rencar.ui.theme.BorderColor
 import com.flowbytestudio.rencar.ui.theme.Danger
 import com.flowbytestudio.rencar.ui.theme.DangerLight
+import com.flowbytestudio.rencar.ui.theme.Dimens
 import com.flowbytestudio.rencar.ui.theme.Primary
 import com.flowbytestudio.rencar.ui.theme.PrimaryLight
 import com.flowbytestudio.rencar.ui.theme.Success
@@ -110,18 +114,18 @@ fun WalletScreen(viewModel: WalletViewModel = viewModel()) {
             .fillMaxSize()
             .background(Background)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp),
+            .padding(horizontal = Dimens.SpaceL),
     ) {
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(Dimens.SpaceXl))
 
         Text(
-            text = "Cüzdan",
+            text = stringResource(R.string.common_wallet),
             fontSize = 29.5.sp,
             fontWeight = FontWeight.Bold,
             color = TextPrimary,
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(Dimens.SpaceL))
 
         when {
             uiState.isLoading -> {
@@ -136,37 +140,37 @@ fun WalletScreen(viewModel: WalletViewModel = viewModel()) {
             }
             uiState.errorMessage != null -> {
                 WalletErrorState(
-                    message = uiState.errorMessage ?: "Cüzdan yüklenemedi",
+                    message = stringResource(uiState.errorMessage ?: R.string.wallet_error_load_fallback),
                     onRetry = viewModel::retry,
                 )
             }
             else -> {
                 BalanceCard(
-                    balance = "₺${formatTl(uiState.balance)}",
+                    balance = stringResource(R.string.common_amount_tl, formatTl(uiState.balance)),
                     onAddFunds = viewModel::openTopupSheet,
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(Dimens.SpaceXl))
 
                 SectionHeader(
-                    title = "Kayıtlı kartlar",
-                    actionLabel = "+ Ekle",
+                    title = stringResource(R.string.wallet_saved_cards_title),
+                    actionLabel = stringResource(R.string.wallet_add_card_action),
                     onAction = viewModel::openAddCardSheet,
                 )
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                if (uiState.cardActionError != null) {
+                uiState.cardActionError?.let { cardActionError ->
                     Text(
-                        text = uiState.cardActionError ?: "",
+                        text = stringResource(cardActionError),
                         fontSize = 13.5.sp,
                         color = Danger,
-                        modifier = Modifier.padding(bottom = 8.dp),
+                        modifier = Modifier.padding(bottom = Dimens.SpaceXs),
                     )
                 }
 
                 if (uiState.cards.isEmpty()) {
-                    EmptyCard(text = "Henüz kayıtlı kartın yok")
+                    EmptyCard(text = stringResource(R.string.wallet_empty_cards))
                 } else {
                     SavedCardsCard {
                         uiState.cards.forEachIndexed { index, card ->
@@ -183,10 +187,10 @@ fun WalletScreen(viewModel: WalletViewModel = viewModel()) {
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(Dimens.SpaceXl))
 
                 SectionHeader(
-                    title = "Son işlemler",
+                    title = stringResource(R.string.wallet_recent_transactions_title),
                     actionLabel = null,
                     onAction = {},
                 )
@@ -195,7 +199,7 @@ fun WalletScreen(viewModel: WalletViewModel = viewModel()) {
 
                 if (uiState.transactions.isEmpty()) {
                     Text(
-                        text = "Henüz bir işlemin yok",
+                        text = stringResource(R.string.wallet_empty_transactions),
                         fontSize = 14.5.sp,
                         color = TextSecondary,
                     )
@@ -212,7 +216,7 @@ fun WalletScreen(viewModel: WalletViewModel = viewModel()) {
             }
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(Dimens.SpaceXxl))
     }
 
     if (uiState.showTopupSheet) {
@@ -250,7 +254,7 @@ private fun WalletErrorState(message: String, onRetry: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 24.dp),
+            .padding(vertical = Dimens.SpaceXl),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
@@ -258,13 +262,13 @@ private fun WalletErrorState(message: String, onRetry: () -> Unit) {
             fontSize = 14.5.sp,
             color = Danger,
         )
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(Dimens.SpaceM))
         Button(
             onClick = onRetry,
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(Dimens.CornerM),
             colors = ButtonDefaults.buttonColors(containerColor = Primary, contentColor = Color.White),
         ) {
-            Text(text = "Tekrar dene", fontWeight = FontWeight.SemiBold)
+            Text(text = stringResource(R.string.common_retry), fontWeight = FontWeight.SemiBold)
         }
     }
 }
@@ -277,13 +281,13 @@ private fun BalanceCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(Dimens.CornerXl))
             .background(
                 Brush.linearGradient(
                     colors = listOf(Color(0xFF3B82F6), Color(0xFF1D4ED8)),
                 )
             )
-            .padding(horizontal = 24.dp, vertical = 28.dp),
+            .padding(horizontal = Dimens.SpaceXl, vertical = 28.dp),
     ) {
         // Dekoratif daire sağ üst
         Box(
@@ -296,7 +300,7 @@ private fun BalanceCard(
 
         Column {
             Text(
-                text = "Rencar bakiyesi",
+                text = stringResource(R.string.wallet_balance_label),
                 fontSize = 15.5.sp,
                 color = Color.White.copy(alpha = 0.80f),
             )
@@ -310,19 +314,19 @@ private fun BalanceCard(
                 color = Color.White,
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpaceXl))
 
             Button(
                 onClick = onAddFunds,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(Dimens.CornerM),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color.White.copy(alpha = 0.20f),
                     contentColor = Color.White,
                 ),
             ) {
                 Text(
-                    text = "+ Bakiye Yükle",
+                    text = stringResource(R.string.wallet_topup_button),
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 16.5.sp,
                     modifier = Modifier.padding(vertical = 2.dp),
@@ -365,7 +369,7 @@ private fun SectionHeader(
 private fun EmptyCard(text: String) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(Dimens.CornerL),
         color = Surface,
         tonalElevation = 0.dp,
     ) {
@@ -373,7 +377,7 @@ private fun EmptyCard(text: String) {
             text = text,
             fontSize = 14.5.sp,
             color = TextSecondary,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 20.dp),
+            modifier = Modifier.padding(horizontal = Dimens.SpaceM, vertical = Dimens.SpaceL),
         )
     }
 }
@@ -382,7 +386,7 @@ private fun EmptyCard(text: String) {
 private fun SavedCardsCard(content: @Composable ColumnScope.() -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(Dimens.CornerL),
         color = Surface,
         tonalElevation = 0.dp,
     ) {
@@ -400,7 +404,7 @@ private fun SavedCardItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 16.dp),
+            .padding(horizontal = Dimens.SpaceM, vertical = Dimens.SpaceM),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         CardBrandLogo(brand = card.brand)
@@ -409,14 +413,14 @@ private fun SavedCardItem(
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "•••• ${card.last4}",
+                text = stringResource(R.string.wallet_card_masked_number, card.last4),
                 fontSize = 16.5.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = TextPrimary,
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = "Son kullanma ${card.expiry}",
+                text = stringResource(R.string.wallet_card_expiry_label, card.expiry),
                 fontSize = 14.5.sp,
                 color = TextSecondary,
             )
@@ -425,12 +429,12 @@ private fun SavedCardItem(
         if (card.isDefault) {
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(Dimens.CornerS))
                     .background(SuccessLight)
                     .padding(horizontal = 10.dp, vertical = 5.dp),
             ) {
                 Text(
-                    text = "Öntanımlı",
+                    text = stringResource(R.string.wallet_default_card_badge),
                     fontSize = 13.5.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Success,
@@ -444,9 +448,9 @@ private fun SavedCardItem(
             ) {
                 Icon(
                     imageVector = Icons.Outlined.SwapHoriz,
-                    contentDescription = "Öntanımlı yap",
+                    contentDescription = stringResource(R.string.wallet_make_default_content_desc),
                     tint = if (actionsEnabled) Primary else TextSecondary,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(Dimens.IconSizeM),
                 )
             }
         }
@@ -458,9 +462,9 @@ private fun SavedCardItem(
         ) {
             Icon(
                 imageVector = Icons.Outlined.DeleteOutline,
-                contentDescription = "Kartı sil",
+                contentDescription = stringResource(R.string.wallet_delete_card),
                 tint = if (actionsEnabled) Danger else TextSecondary,
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(Dimens.IconSizeM),
             )
         }
     }
@@ -472,13 +476,13 @@ private fun CardBrandLogo(brand: String) {
     Box(
         modifier = Modifier
             .size(width = 48.dp, height = 32.dp)
-            .clip(RoundedCornerShape(6.dp))
+            .clip(RoundedCornerShape(Dimens.CornerXs))
             .background(if (isVisa) VisaBlue else Color(0xFF252525)),
         contentAlignment = Alignment.Center,
     ) {
         if (isVisa) {
             Text(
-                text = "VISA",
+                text = stringResource(R.string.wallet_visa_logo_text),
                 fontSize = 12.5.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
@@ -507,7 +511,7 @@ private fun CardBrandLogo(brand: String) {
 private fun TransactionsCard(content: @Composable ColumnScope.() -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(Dimens.CornerL),
         color = Surface,
         tonalElevation = 0.dp,
     ) {
@@ -544,19 +548,31 @@ private fun TransactionItem(transaction: WalletTransactionUiModel) {
     }
 
     val isCredit = transaction.amount >= 0
-    val amountText = "${if (isCredit) "+" else "-"}₺${formatTl(kotlin.math.abs(transaction.amount))}"
+    val amountText = stringResource(
+        R.string.wallet_transaction_amount_format,
+        if (isCredit) "+" else "-",
+        formatTl(kotlin.math.abs(transaction.amount)),
+    )
     val amountColor = if (isCredit) Success else Danger
+
+    val title = transaction.titleText ?: stringResource(transaction.titleRes)
+    // Sabit etiketli türlerde açıklama etiketten farklıysa onu da ikincil satırda gösteririz.
+    val subtitle = if (transaction.description.isNotBlank() && transaction.description != title) {
+        stringResource(R.string.wallet_transaction_subtitle_format, transaction.description, transaction.date)
+    } else {
+        transaction.date
+    }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = Dimens.SpaceM, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             modifier = Modifier
                 .size(42.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(Dimens.CornerM))
                 .background(iconBg),
             contentAlignment = Alignment.Center,
         ) {
@@ -564,22 +580,22 @@ private fun TransactionItem(transaction: WalletTransactionUiModel) {
                 imageVector = icon,
                 contentDescription = null,
                 tint = iconTint,
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(Dimens.IconSizeM),
             )
         }
 
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(Dimens.SpaceS))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = transaction.title,
+                text = title,
                 fontSize = 16.5.sp,
                 fontWeight = FontWeight.Medium,
                 color = TextPrimary,
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = transaction.subtitle,
+                text = subtitle,
                 fontSize = 14.5.sp,
                 color = TextSecondary,
             )
@@ -597,7 +613,7 @@ private fun TransactionItem(transaction: WalletTransactionUiModel) {
 @Composable
 private fun CardDivider() {
     HorizontalDivider(
-        modifier = Modifier.padding(horizontal = 16.dp),
+        modifier = Modifier.padding(horizontal = Dimens.SpaceM),
         color = Background,
         thickness = 1.dp,
     )
@@ -607,7 +623,7 @@ private fun CardDivider() {
 @Composable
 private fun TopupSheet(
     isSubmitting: Boolean,
-    errorMessage: String?,
+    @StringRes errorMessage: Int?,
     onDismiss: () -> Unit,
     onSubmit: (String) -> Unit,
 ) {
@@ -621,34 +637,34 @@ private fun TopupSheet(
     ) {
         Column(
             modifier = Modifier
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 8.dp)
+                .padding(horizontal = Dimens.SpaceL)
+                .padding(bottom = Dimens.SpaceXs)
                 .navigationBarsPadding()
                 .imePadding(),
         ) {
             Text(
-                text = "Bakiye Yükle",
+                text = stringResource(R.string.wallet_topup_sheet_title),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary,
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpaceXxs))
             Text(
-                text = "10-5000 TL aralığında yükleme yapabilirsin.",
+                text = stringResource(R.string.wallet_topup_range_hint),
                 fontSize = 13.5.sp,
                 color = TextSecondary,
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpaceL))
 
             OutlinedTextField(
                 value = amount,
                 onValueChange = { input -> amount = input.filter { it.isDigit() }.take(5) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                label = { Text("Yüklenecek tutar (TL)") },
+                label = { Text(stringResource(R.string.wallet_topup_amount_field_label)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(Dimens.CornerCard),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Primary,
                     unfocusedBorderColor = BorderColor,
@@ -657,12 +673,12 @@ private fun TopupSheet(
                 ),
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpaceS))
 
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 listOf(100, 250, 500).forEach { chip ->
                     AmountChip(
-                        label = "₺$chip",
+                        label = stringResource(R.string.wallet_amount_chip_format, chip),
                         onClick = { amount = chip.toString() },
                         modifier = Modifier.weight(1f),
                     )
@@ -670,20 +686,20 @@ private fun TopupSheet(
             }
 
             if (errorMessage != null) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(text = errorMessage, fontSize = 13.5.sp, color = Danger)
+                Spacer(modifier = Modifier.height(Dimens.SpaceS))
+                Text(text = stringResource(errorMessage), fontSize = 13.5.sp, color = Danger)
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpaceL))
 
             SheetPrimaryButton(
-                text = "Yükle",
+                text = stringResource(R.string.wallet_topup_submit_button),
                 isLoading = isSubmitting,
                 enabled = amount.isNotBlank() && !isSubmitting,
                 onClick = { onSubmit(amount) },
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpaceS))
         }
     }
 }
@@ -696,10 +712,10 @@ private fun AmountChip(
 ) {
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(Dimens.CornerM))
             .background(PrimaryLight)
             .clickable(onClick = onClick)
-            .padding(vertical = 12.dp),
+            .padding(vertical = Dimens.SpaceS),
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -715,7 +731,7 @@ private fun AmountChip(
 @Composable
 private fun AddCardSheet(
     isSubmitting: Boolean,
-    errorMessage: String?,
+    @StringRes errorMessage: Int?,
     onDismiss: () -> Unit,
     onSubmit: (brand: String, last4: String, expMonth: String, expYear: String) -> Unit,
 ) {
@@ -732,65 +748,65 @@ private fun AddCardSheet(
     ) {
         Column(
             modifier = Modifier
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 8.dp)
+                .padding(horizontal = Dimens.SpaceL)
+                .padding(bottom = Dimens.SpaceXs)
                 .navigationBarsPadding()
                 .imePadding(),
         ) {
             Text(
-                text = "Kart Ekle",
+                text = stringResource(R.string.wallet_add_card_sheet_title),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary,
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpaceXxs))
             Text(
-                text = "Güvenlik gereği yalnızca marka, son 4 hane ve son kullanma tarihi saklanır.",
+                text = stringResource(R.string.wallet_add_card_privacy_note),
                 fontSize = 13.5.sp,
                 color = TextSecondary,
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpaceL))
 
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 BrandOption(
-                    label = "Visa",
+                    label = stringResource(R.string.common_brand_visa),
                     selected = brand == "VISA",
                     onClick = { brand = "VISA" },
                     modifier = Modifier.weight(1f),
                 )
                 BrandOption(
-                    label = "Mastercard",
+                    label = stringResource(R.string.common_brand_mastercard),
                     selected = brand == "MASTERCARD",
                     onClick = { brand = "MASTERCARD" },
                     modifier = Modifier.weight(1f),
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpaceM))
 
             OutlinedTextField(
                 value = last4,
                 onValueChange = { input -> last4 = input.filter { it.isDigit() }.take(4) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                label = { Text("Kart numarasının son 4 hanesi") },
+                label = { Text(stringResource(R.string.wallet_card_last4_field_label)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(Dimens.CornerCard),
                 colors = sheetFieldColors(),
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpaceS))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceS)) {
                 OutlinedTextField(
                     value = expMonth,
                     onValueChange = { input -> expMonth = input.filter { it.isDigit() }.take(2) },
                     modifier = Modifier.weight(1f),
                     singleLine = true,
-                    label = { Text("Ay (AA)") },
+                    label = { Text(stringResource(R.string.wallet_expiry_month_field_label)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(Dimens.CornerCard),
                     colors = sheetFieldColors(),
                 )
                 OutlinedTextField(
@@ -798,28 +814,28 @@ private fun AddCardSheet(
                     onValueChange = { input -> expYear = input.filter { it.isDigit() }.take(4) },
                     modifier = Modifier.weight(1f),
                     singleLine = true,
-                    label = { Text("Yıl (YYYY)") },
+                    label = { Text(stringResource(R.string.wallet_expiry_year_field_label)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(Dimens.CornerCard),
                     colors = sheetFieldColors(),
                 )
             }
 
             if (errorMessage != null) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(text = errorMessage, fontSize = 13.5.sp, color = Danger)
+                Spacer(modifier = Modifier.height(Dimens.SpaceS))
+                Text(text = stringResource(errorMessage), fontSize = 13.5.sp, color = Danger)
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpaceL))
 
             SheetPrimaryButton(
-                text = "Kartı Ekle",
+                text = stringResource(R.string.wallet_add_card_submit_button),
                 isLoading = isSubmitting,
                 enabled = last4.length == 4 && expMonth.isNotBlank() && expYear.length == 4 && !isSubmitting,
                 onClick = { onSubmit(brand, last4, expMonth, expYear) },
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(Dimens.SpaceS))
         }
     }
 }
@@ -833,12 +849,12 @@ private fun BrandOption(
 ) {
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(Dimens.CornerM))
             .background(if (selected) PrimaryLight else BgLight)
             .border(
                 width = if (selected) 1.5.dp else 1.dp,
                 color = if (selected) Primary else BorderColor,
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(Dimens.CornerM),
             )
             .clickable(onClick = onClick)
             .padding(vertical = 14.dp),
@@ -866,7 +882,7 @@ private fun SheetPrimaryButton(
         modifier = Modifier
             .fillMaxWidth()
             .height(52.dp),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(Dimens.CornerCard),
         colors = ButtonDefaults.buttonColors(
             containerColor = Primary,
             contentColor = Color.White,
@@ -895,22 +911,22 @@ private fun DeleteCardDialog(
         onDismissRequest = onDismiss,
         containerColor = Surface,
         title = {
-            Text(text = "Kartı sil", fontWeight = FontWeight.Bold, color = TextPrimary)
+            Text(text = stringResource(R.string.wallet_delete_card), fontWeight = FontWeight.Bold, color = TextPrimary)
         },
         text = {
             Text(
-                text = "•••• ${card.last4} numaralı kartı silmek istediğine emin misin?",
+                text = stringResource(R.string.wallet_delete_card_confirm_message, card.last4),
                 color = TextSecondary,
             )
         },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text(text = "Sil", color = Danger, fontWeight = FontWeight.SemiBold)
+                Text(text = stringResource(R.string.wallet_delete_confirm_button), color = Danger, fontWeight = FontWeight.SemiBold)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(text = "Vazgeç", color = TextSecondary)
+                Text(text = stringResource(R.string.common_cancel), color = TextSecondary)
             }
         },
     )
