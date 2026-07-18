@@ -78,6 +78,7 @@ fun ProfileScreen(
     onNavigateToSettings: () -> Unit = {},
     onNavigateToLicenseUpload: () -> Unit = {},
     onNavigateToReferral: () -> Unit = {},
+    onNavigateToPaymentMethods: () -> Unit = {},
     viewModel: ProfileViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -85,7 +86,7 @@ fun ProfileScreen(
     ProfileContent(
         uiState = uiState,
         onEditClick = {},
-        onPaymentMethodsClick = {},
+        onPaymentMethodsClick = onNavigateToPaymentMethods,
         onSettingsClick = onNavigateToSettings,
         onSupportClick = {},
         onLicenseActionClick = onNavigateToLicenseUpload,

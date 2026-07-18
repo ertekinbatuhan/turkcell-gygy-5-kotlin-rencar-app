@@ -62,6 +62,7 @@ fun AppNavGraph(
                 onNavigateToSettings = { navController.navigate(SettingsRoute) },
                 onNavigateToLicenseUpload = { navController.navigate(LicenseUploadRoute) },
                 onNavigateToReferral = { navController.navigate(ReferralRoute) },
+                onNavigateToPaymentMethods = { navController.navigate(WalletRoute) },
             )
         }
         composable<SettingsRoute> {
