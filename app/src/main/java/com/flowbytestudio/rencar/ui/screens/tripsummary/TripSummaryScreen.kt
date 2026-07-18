@@ -168,6 +168,12 @@ fun TripSummaryScreen(
                                 onMethodSelect = viewModel::onMethodSelect,
                                 onCardSelect = viewModel::onCardSelect,
                                 onDiscountCodeChange = viewModel::onDiscountCodeChange,
+                                onIyzicoSubMethodSelect = viewModel::onIyzicoSubMethodSelect,
+                                onIyzicoCardHolderNameChange = viewModel::onIyzicoCardHolderNameChange,
+                                onIyzicoCardNumberChange = viewModel::onIyzicoCardNumberChange,
+                                onIyzicoExpireMonthChange = viewModel::onIyzicoExpireMonthChange,
+                                onIyzicoExpireYearChange = viewModel::onIyzicoExpireYearChange,
+                                onIyzicoCvcChange = viewModel::onIyzicoCvcChange,
                             )
                         }
 
@@ -187,6 +193,14 @@ fun TripSummaryScreen(
             IyzicoCheckoutDialog(
                 url = url,
                 onReturnedToBackend = viewModel::onIyzicoWebViewReturnedToBackend,
+                onDismiss = viewModel::onIyzicoCheckoutCancelled,
+            )
+        }
+
+        uiState.iyzicoCheckoutHtml?.let { html ->
+            Iyzico3dsDialog(
+                html = html,
+                onReturnedToBackend = viewModel::onIyzico3dsWebViewReturnedToBackend,
                 onDismiss = viewModel::onIyzicoCheckoutCancelled,
             )
         }
@@ -347,6 +361,12 @@ private fun PaymentSection(
     onMethodSelect: (PaymentMethodOption) -> Unit,
     onCardSelect: (String) -> Unit,
     onDiscountCodeChange: (String) -> Unit,
+    onIyzicoSubMethodSelect: (IyzicoSubMethod) -> Unit,
+    onIyzicoCardHolderNameChange: (String) -> Unit,
+    onIyzicoCardNumberChange: (String) -> Unit,
+    onIyzicoExpireMonthChange: (String) -> Unit,
+    onIyzicoExpireYearChange: (String) -> Unit,
+    onIyzicoCvcChange: (String) -> Unit,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -422,6 +442,19 @@ private fun PaymentSection(
                         }
                     }
                 }
+            }
+
+            if (uiState.selectedMethod == PaymentMethodOption.IYZICO) {
+                Spacer(modifier = Modifier.height(12.dp))
+                IyzicoSubMethodSection(
+                    uiState = uiState,
+                    onSubMethodSelect = onIyzicoSubMethodSelect,
+                    onCardHolderNameChange = onIyzicoCardHolderNameChange,
+                    onCardNumberChange = onIyzicoCardNumberChange,
+                    onExpireMonthChange = onIyzicoExpireMonthChange,
+                    onExpireYearChange = onIyzicoExpireYearChange,
+                    onCvcChange = onIyzicoCvcChange,
+                )
             }
 
             // İyzico ödemesinde indirim kodu desteklenmiyor (spec: "IYZICO'da kullanılamaz").
@@ -740,6 +773,259 @@ private fun IyzicoCheckoutDialog(
                             }
                         }
                         loadUrl(url)
+                    }
+                },
+            )
+        }
+    }
+}
+
+// İyzico üzerinden üç tahsilat yolu sunulur: banka onayı istemcide toplanmayan
+// barındırılan ödeme sayfası, kart bilgisiyle 3-D Secure doğrulamalı tahsilat ve
+// kart bilgisiyle doğrudan (3-D Secure'suz) tahsilat.
+@Composable
+private fun IyzicoSubMethodSection(
+    uiState: TripSummaryUiState,
+    onSubMethodSelect: (IyzicoSubMethod) -> Unit,
+    onCardHolderNameChange: (String) -> Unit,
+    onCardNumberChange: (String) -> Unit,
+    onExpireMonthChange: (String) -> Unit,
+    onExpireYearChange: (String) -> Unit,
+    onCvcChange: (String) -> Unit,
+) {
+    Column {
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            SubMethodTab(
+                label = "Ödeme sayfası",
+                selected = uiState.iyzicoSubMethod == IyzicoSubMethod.HOSTED_PAGE,
+                onClick = { onSubMethodSelect(IyzicoSubMethod.HOSTED_PAGE) },
+                modifier = Modifier.weight(1f),
+            )
+            SubMethodTab(
+                label = "3D Secure",
+                selected = uiState.iyzicoSubMethod == IyzicoSubMethod.CARD_3DS,
+                onClick = { onSubMethodSelect(IyzicoSubMethod.CARD_3DS) },
+                modifier = Modifier.weight(1f),
+            )
+            SubMethodTab(
+                label = "Hızlı kart",
+                selected = uiState.iyzicoSubMethod == IyzicoSubMethod.CARD_DIRECT,
+                onClick = { onSubMethodSelect(IyzicoSubMethod.CARD_DIRECT) },
+                modifier = Modifier.weight(1f),
+            )
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        when (uiState.iyzicoSubMethod) {
+            IyzicoSubMethod.HOSTED_PAGE -> {
+                Text(
+                    text = "Kart bilgisi İyzico'nun ödeme sayfasında girilir; kart numarası bu uygulamaya iletilmez.",
+                    fontSize = 12.sp,
+                    color = TextSecondary,
+                )
+            }
+            IyzicoSubMethod.CARD_3DS, IyzicoSubMethod.CARD_DIRECT -> {
+                IyzicoCardForm(
+                    uiState = uiState,
+                    onCardHolderNameChange = onCardHolderNameChange,
+                    onCardNumberChange = onCardNumberChange,
+                    onExpireMonthChange = onExpireMonthChange,
+                    onExpireYearChange = onExpireYearChange,
+                    onCvcChange = onCvcChange,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = if (uiState.iyzicoSubMethod == IyzicoSubMethod.CARD_3DS) {
+                        "Bankan SMS ile doğrulama isteyebilir."
+                    } else {
+                        "Tutar kartından anında tahsil edilir, ek doğrulama adımı yoktur."
+                    },
+                    fontSize = 12.sp,
+                    color = TextSecondary,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun IyzicoCardForm(
+    uiState: TripSummaryUiState,
+    onCardHolderNameChange: (String) -> Unit,
+    onCardNumberChange: (String) -> Unit,
+    onExpireMonthChange: (String) -> Unit,
+    onExpireYearChange: (String) -> Unit,
+    onCvcChange: (String) -> Unit,
+) {
+    Column {
+        OutlinedTextField(
+            value = uiState.iyzicoCardHolderName,
+            onValueChange = onCardHolderNameChange,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Kart üzerindeki isim") },
+            singleLine = true,
+            shape = RoundedCornerShape(14.dp),
+            colors = iyzicoFieldColors(),
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(
+            value = uiState.iyzicoCardNumber,
+            onValueChange = onCardNumberChange,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Kart numarası") },
+            singleLine = true,
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
+            ),
+            shape = RoundedCornerShape(14.dp),
+            colors = iyzicoFieldColors(),
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(
+                value = uiState.iyzicoExpireMonth,
+                onValueChange = onExpireMonthChange,
+                modifier = Modifier.weight(1f),
+                label = { Text("Ay") },
+                placeholder = { Text("AA") },
+                singleLine = true,
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
+                ),
+                shape = RoundedCornerShape(14.dp),
+                colors = iyzicoFieldColors(),
+            )
+            OutlinedTextField(
+                value = uiState.iyzicoExpireYear,
+                onValueChange = onExpireYearChange,
+                modifier = Modifier.weight(1f),
+                label = { Text("Yıl") },
+                placeholder = { Text("YYYY") },
+                singleLine = true,
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
+                ),
+                shape = RoundedCornerShape(14.dp),
+                colors = iyzicoFieldColors(),
+            )
+            OutlinedTextField(
+                value = uiState.iyzicoCvc,
+                onValueChange = onCvcChange,
+                modifier = Modifier.weight(1f),
+                label = { Text("CVC") },
+                singleLine = true,
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
+                ),
+                shape = RoundedCornerShape(14.dp),
+                colors = iyzicoFieldColors(),
+            )
+        }
+    }
+}
+
+@Composable
+private fun iyzicoFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedBorderColor = Primary,
+    unfocusedBorderColor = BorderColor,
+    focusedContainerColor = Surface,
+    unfocusedContainerColor = Surface,
+)
+
+@Composable
+private fun SubMethodTab(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val shape = RoundedCornerShape(10.dp)
+    Box(
+        modifier = modifier
+            .clip(shape)
+            .border(
+                width = if (selected) 1.5.dp else 1.dp,
+                color = if (selected) Primary else BorderLight,
+                shape = shape,
+            )
+            .background(if (selected) PrimaryLight else Surface)
+            .clickable(onClick = onClick)
+            .padding(vertical = 10.dp, horizontal = 4.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            fontSize = 11.5.sp,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            softWrap = false,
+            color = if (selected) Primary else TextSecondary,
+        )
+    }
+}
+
+// İyzico'nun banka doğrulama HTML'ini (threeDSHtmlContentDecoded) doğrudan render eden
+// WebView diyaloğu. Form otomatik submit olur, kullanıcı SMS kodunu girer; İyzico son
+// adımda backend host'umuza (BACKEND_HOST) döner ve orada "Ödeme başarılı" sayfasını
+// gösterir — bu sayfanın HTML'i onReturnedToBackend'e taşınıp paymentId'i parse eder.
+@Composable
+private fun Iyzico3dsDialog(
+    html: String,
+    onReturnedToBackend: (pageHtml: String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Column(modifier = Modifier.fillMaxSize().background(Surface)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = "3D Secure doğrulama",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary,
+                )
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = "Kapat",
+                    tint = TextSecondary,
+                    modifier = Modifier.clickable(onClick = onDismiss),
+                )
+            }
+            HorizontalDivider(color = Background, thickness = 1.dp)
+
+            androidx.compose.ui.viewinterop.AndroidView(
+                modifier = Modifier.fillMaxSize(),
+                factory = { context ->
+                    android.webkit.WebView(context).apply {
+                        settings.javaScriptEnabled = true
+                        settings.domStorageEnabled = true
+                        webViewClient = object : android.webkit.WebViewClient() {
+                            override fun onPageFinished(view: android.webkit.WebView?, loadedUrl: String?) {
+                                super.onPageFinished(view, loadedUrl)
+                                val host = loadedUrl?.let { runCatching { java.net.URI(it).host }.getOrNull() }
+                                if (host == BACKEND_HOST) {
+                                    view?.evaluateJavascript(
+                                        "document.documentElement.outerHTML",
+                                    ) { rawHtml ->
+                                        // evaluateJavascript sonucu JSON-string olarak gelir (kaçışlı); çöz.
+                                        val decoded = runCatching {
+                                            org.json.JSONTokener(rawHtml).nextValue() as String
+                                        }.getOrDefault(rawHtml.orEmpty())
+                                        onReturnedToBackend(decoded)
+                                    }
+                                }
+                            }
+                        }
+                        loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
                     }
                 },
             )

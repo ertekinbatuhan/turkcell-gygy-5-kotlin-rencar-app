@@ -7,6 +7,16 @@ import com.flowbytestudio.rencar.data.rentals.RentalDto
 /** Fatura ekranındaki ödeme yöntemi seçimi. API'ye WALLET/CARD/IYZICO olarak gider. */
 enum class PaymentMethodOption { WALLET, CARD, IYZICO }
 
+/** İyzico seçilince kendi içindeki tahsilat yöntemi. */
+enum class IyzicoSubMethod {
+    // Kart bilgisi bu uygulamada toplanmaz; İyzico'nun barındırdığı ödeme sayfası açılır.
+    HOSTED_PAGE,
+    // Kart bilgisi bu ekranda toplanır; banka onayı SMS ile (3-D Secure) doğrulanır.
+    CARD_3DS,
+    // Kart bilgisi bu ekranda toplanır; 3-D Secure adımı yoktur, tahsilat anında sonuçlanır.
+    CARD_DIRECT,
+}
+
 data class TripSummaryUiState(
     val isLoading: Boolean = true,
     val loadError: String? = null,
@@ -21,8 +31,17 @@ data class TripSummaryUiState(
     val isPaying: Boolean = false,
     val payError: String? = null,
 
-    // İyzico Checkout Form akışı: WebView açılırken dolar, sonuç gelene kadar sürer.
+    // İyzico alt-yöntem seçimi + kart formu (yalnız CARD_3DS/CARD_DIRECT'te doldurulur).
+    val iyzicoSubMethod: IyzicoSubMethod = IyzicoSubMethod.HOSTED_PAGE,
+    val iyzicoCardHolderName: String = "",
+    val iyzicoCardNumber: String = "",
+    val iyzicoExpireMonth: String = "",
+    val iyzicoExpireYear: String = "",
+    val iyzicoCvc: String = "",
+
+    // WebView açılırken dolar (Checkout Form ya da 3DS doğrulama sayfası), sonuç gelene kadar sürer.
     val iyzicoCheckoutUrl: String? = null,
+    val iyzicoCheckoutHtml: String? = null,
     val iyzicoToken: String? = null,
 
     // Bu oturumda ödeme alındığında dolan makbuz (paidAmount, kalan bakiye / kart).
@@ -66,6 +85,14 @@ data class TripSummaryUiState(
             return balance < payable
         }
 
+    /** İyzico 3DS kart formu geçerli mi (basit alan doluluk kontrolü; sunucu asıl doğrulamayı yapar). */
+    val iyzicoCardFormValid: Boolean
+        get() = iyzicoCardHolderName.isNotBlank() &&
+            iyzicoCardNumber.replace(" ", "").length in 15..16 &&
+            iyzicoExpireMonth.length == 2 &&
+            iyzicoExpireYear.length == 4 &&
+            iyzicoCvc.length in 3..4
+
     /** Ödeme tuşu aktif mi? */
     val canPay: Boolean
         get() {
@@ -73,7 +100,10 @@ data class TripSummaryUiState(
             return when (selectedMethod) {
                 PaymentMethodOption.WALLET -> walletBalance != null && !walletInsufficient
                 PaymentMethodOption.CARD -> selectedCardId != null
-                PaymentMethodOption.IYZICO -> true
+                PaymentMethodOption.IYZICO -> when (iyzicoSubMethod) {
+                    IyzicoSubMethod.HOSTED_PAGE -> true
+                    IyzicoSubMethod.CARD_3DS, IyzicoSubMethod.CARD_DIRECT -> iyzicoCardFormValid
+                }
             }
         }
 }

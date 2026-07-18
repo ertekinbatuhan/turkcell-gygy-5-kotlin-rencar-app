@@ -22,4 +22,35 @@ class IyzicoRepository(
     suspend fun getCheckoutFormResult(token: String): Result<IyzicoPaymentResponse> = runCatching {
         api.getCheckoutFormResult(token)
     }
+
+    // 3-D Secure YOK: kart bilgisi burada toplanır, cevap senkron gelir.
+    suspend fun createPayment(
+        rentalId: String,
+        amount: Double,
+        card: IyzicoCardRequest,
+    ): Result<IyzicoPaymentResponse> = runCatching {
+        api.createPayment(
+            CreateIyzicoPaymentRequest(
+                price = amount,
+                description = "RenCar yolculuk ödemesi",
+                basketId = "rental-$rentalId",
+                card = card,
+            ),
+        )
+    }
+
+    suspend fun initializeThreeds(
+        rentalId: String,
+        amount: Double,
+        card: IyzicoCardRequest,
+    ): Result<ThreedsInitializeResponse> = runCatching {
+        api.initializeThreeds(
+            CreateIyzicoPaymentRequest(
+                price = amount,
+                description = "RenCar yolculuk ödemesi",
+                basketId = "rental-$rentalId",
+                card = card,
+            ),
+        )
+    }
 }

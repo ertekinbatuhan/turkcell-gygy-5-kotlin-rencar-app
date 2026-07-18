@@ -3,6 +3,7 @@ package com.flowbytestudio.rencar.ui.screens.tripsummary
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flowbytestudio.rencar.data.cards.CardRepository
+import com.flowbytestudio.rencar.data.iyzico.IyzicoCardRequest
 import com.flowbytestudio.rencar.data.iyzico.IyzicoRepository
 import com.flowbytestudio.rencar.data.rentals.RentalRepository
 import com.flowbytestudio.rencar.data.wallet.WalletRepository
@@ -82,11 +83,39 @@ class TripSummaryViewModel(
         _uiState.update { it.copy(discountCode = code) }
     }
 
+    fun onIyzicoSubMethodSelect(subMethod: IyzicoSubMethod) {
+        _uiState.update { it.copy(iyzicoSubMethod = subMethod, payError = null) }
+    }
+
+    fun onIyzicoCardHolderNameChange(value: String) {
+        _uiState.update { it.copy(iyzicoCardHolderName = value, payError = null) }
+    }
+
+    fun onIyzicoCardNumberChange(value: String) {
+        _uiState.update { it.copy(iyzicoCardNumber = value, payError = null) }
+    }
+
+    fun onIyzicoExpireMonthChange(value: String) {
+        _uiState.update { it.copy(iyzicoExpireMonth = value, payError = null) }
+    }
+
+    fun onIyzicoExpireYearChange(value: String) {
+        _uiState.update { it.copy(iyzicoExpireYear = value, payError = null) }
+    }
+
+    fun onIyzicoCvcChange(value: String) {
+        _uiState.update { it.copy(iyzicoCvc = value, payError = null) }
+    }
+
     fun pay() {
         val state = _uiState.value
         if (state.isPaying || !state.isPayable || !state.canPay) return
         when (state.selectedMethod) {
-            PaymentMethodOption.IYZICO -> startIyzicoCheckout()
+            PaymentMethodOption.IYZICO -> when (state.iyzicoSubMethod) {
+                IyzicoSubMethod.HOSTED_PAGE -> startIyzicoHostedPage()
+                IyzicoSubMethod.CARD_3DS -> startIyzicoCardPayment(threeDs = true)
+                IyzicoSubMethod.CARD_DIRECT -> startIyzicoCardPayment(threeDs = false)
+            }
             PaymentMethodOption.WALLET, PaymentMethodOption.CARD -> payDirect()
         }
     }
@@ -118,9 +147,9 @@ class TripSummaryViewModel(
         }
     }
 
-    // --- İyzico Checkout Form akışı --------------------------------------------
+    // --- İyzico Hazır Sayfa (Checkout Form) akışı -------------------------------
 
-    private fun startIyzicoCheckout() {
+    private fun startIyzicoHostedPage() {
         val amount = _uiState.value.payableAmount ?: return
         viewModelScope.launch {
             _uiState.update { it.copy(isPaying = true, payError = null) }
@@ -171,7 +200,90 @@ class TripSummaryViewModel(
     }
 
     fun onIyzicoCheckoutCancelled() {
-        _uiState.update { it.copy(isPaying = false, iyzicoCheckoutUrl = null, iyzicoToken = null) }
+        _uiState.update {
+            it.copy(isPaying = false, iyzicoCheckoutUrl = null, iyzicoCheckoutHtml = null, iyzicoToken = null)
+        }
+    }
+
+    // --- İyzico kart formu (3-D Secure ve doğrudan tahsilat ortak akışı) --------
+
+    private fun startIyzicoCardPayment(threeDs: Boolean) {
+        val state = _uiState.value
+        val amount = state.payableAmount ?: return
+        if (!state.iyzicoCardFormValid) return
+        val card = IyzicoCardRequest(
+            cardHolderName = state.iyzicoCardHolderName.trim(),
+            cardNumber = state.iyzicoCardNumber.replace(" ", ""),
+            expireMonth = state.iyzicoExpireMonth.trim(),
+            expireYear = state.iyzicoExpireYear.trim(),
+            cvc = state.iyzicoCvc.trim(),
+        )
+        if (threeDs) {
+            startThreedsPayment(amount, card)
+        } else {
+            startDirectCardPayment(amount, card)
+        }
+    }
+
+    // Kart bilgisi bu ekranda toplanır, 3-D Secure adımı yoktur; İyzico sonucu senkron döner.
+    private fun startDirectCardPayment(amount: Double, card: IyzicoCardRequest) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isPaying = true, payError = null) }
+            iyzicoRepository.createPayment(rentalId, amount, card)
+                .onSuccess { response ->
+                    if (response.status == "success" && response.paymentId != null) {
+                        finalizeIyzicoPayment(response.paymentId)
+                    } else {
+                        _uiState.update {
+                            it.copy(isPaying = false, payError = "Kart tahsilatı reddedildi. Bilgileri kontrol et.")
+                        }
+                    }
+                }
+                .onFailure {
+                    _uiState.update {
+                        it.copy(isPaying = false, payError = "Kart tahsilatı reddedildi. Bilgileri kontrol et.")
+                    }
+                }
+        }
+    }
+
+    // Kart bilgisi bu ekranda toplanır; banka onayı SMS ile doğrulanır.
+    private fun startThreedsPayment(amount: Double, card: IyzicoCardRequest) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isPaying = true, payError = null) }
+            iyzicoRepository.initializeThreeds(rentalId, amount, card)
+                .onSuccess { response ->
+                    val html = response.threeDSHtmlContentDecoded
+                    if (response.status != "success" || html == null) {
+                        _uiState.update {
+                            it.copy(isPaying = false, payError = "3D Secure doğrulaması başlatılamadı.")
+                        }
+                        return@onSuccess
+                    }
+                    // WebView bu HTML'i doğrudan render eder: banka formu otomatik submit olur,
+                    // kullanıcı SMS kodunu girer, İyzico son adımda backend host'umuza
+                    // (rencarv2.halitkalayci.com/iyzico/payments/threeds/callback) döner.
+                    _uiState.update { it.copy(iyzicoCheckoutHtml = html) }
+                }
+                .onFailure {
+                    _uiState.update {
+                        it.copy(isPaying = false, payError = "3D Secure doğrulaması başlatılamadı.")
+                    }
+                }
+        }
+    }
+
+    // WebView backend'in 3DS callback host'una dönünce, sayfanın kendi HTML'i (backend'in
+    // döndürdüğü "Ödeme başarılı" sayfası) taranıp paymentId çıkarılır — bu callback JSON
+    // döndürmüyor, doğrudan kullanıcıya gösterilecek bir sonuç sayfası döndürüyor.
+    fun onIyzico3dsWebViewReturnedToBackend(pageHtml: String) {
+        _uiState.update { it.copy(iyzicoCheckoutHtml = null) }
+        val paymentId = IYZICO_PAYMENT_ID_REGEX.find(pageHtml)?.groupValues?.get(1)
+        if (paymentId == null) {
+            _uiState.update { it.copy(isPaying = false, payError = "Ödeme sonucu okunamadı.") }
+            return
+        }
+        viewModelScope.launch { finalizeIyzicoPayment(paymentId) }
     }
 
     private suspend fun finalizeIyzicoPayment(iyzicoPaymentId: String) {
@@ -194,6 +306,9 @@ class TripSummaryViewModel(
             }
     }
 }
+
+// Backend'in 3DS callback sonuç sayfasındaki "Ödeme ID<b>36789054</b>" biçimini hedefler.
+private val IYZICO_PAYMENT_ID_REGEX = Regex("""Ödeme ID</td><td[^>]*><b>(\d+)</b>""")
 
 private fun Throwable.toLoadErrorMessage(): String = when {
     this is HttpException && code() == 404 -> "Kiralama bulunamadı."
