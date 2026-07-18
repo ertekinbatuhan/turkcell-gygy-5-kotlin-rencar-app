@@ -1,14 +1,14 @@
 package com.flowbytestudio.rencar.navigation
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBalanceWallet
-import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.outlined.AccountBalanceWallet
-import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.outlined.CreditCard
 import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.outlined.Map
+import androidx.compose.material.icons.outlined.LocationOn
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -26,8 +26,8 @@ val bottomNavItems = listOf(
         route = MapRoute,
         matchesDestination = { it?.hasRoute(MapRoute::class) == true },
         label = "Harita",
-        selectedIcon = Icons.Filled.Map,
-        unselectedIcon = Icons.Outlined.Map,
+        selectedIcon = Icons.Filled.LocationOn,
+        unselectedIcon = Icons.Outlined.LocationOn,
     ),
     BottomNavItem(
         route = HistoryRoute,
@@ -40,14 +40,14 @@ val bottomNavItems = listOf(
         route = WalletRoute,
         matchesDestination = { it?.hasRoute(WalletRoute::class) == true },
         label = "Cüzdan",
-        selectedIcon = Icons.Filled.AccountBalanceWallet,
-        unselectedIcon = Icons.Outlined.AccountBalanceWallet,
+        selectedIcon = Icons.Filled.CreditCard,
+        unselectedIcon = Icons.Outlined.CreditCard,
     ),
     BottomNavItem(
         route = ProfileRoute,
         matchesDestination = { it?.hasRoute(ProfileRoute::class) == true },
         label = "Profil",
-        selectedIcon = Icons.Filled.AccountCircle,
-        unselectedIcon = Icons.Outlined.AccountCircle,
+        selectedIcon = Icons.Filled.Person,
+        unselectedIcon = Icons.Outlined.Person,
     ),
 )

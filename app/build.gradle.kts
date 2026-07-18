@@ -23,7 +23,15 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Prod'da tek satirlik degisiklik: bu satiri kaldirmak (veya false yapmak) yeterli.
+            // Onboarding gorunurlugu asil kaynagi olan OnboardingPreferences.hasSeenOnboarding
+            // zaten kalici; bu bayrak sadece gelistirme sirasinda her acilista tekrar
+            // gorulebilmesi icin gecici olarak onune geciyor.
+            buildConfigField("boolean", "ALWAYS_SHOW_ONBOARDING", "true")
+        }
         release {
+            buildConfigField("boolean", "ALWAYS_SHOW_ONBOARDING", "false")
             optimization {
                 enable = false
             }
@@ -35,6 +43,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -46,11 +55,24 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.kotlinx.serialization.converter)
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.logging.interceptor)
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.coil.compose)
+    implementation(libs.socket.io.client)
+    implementation(libs.maplibre.android.sdk)
+    implementation(libs.maplibre.annotation.plugin) {
+        exclude(group = "org.maplibre.gl", module = "android-sdk")
+    }
+    implementation(libs.play.services.location)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
