@@ -70,6 +70,7 @@ class RentalRepository(
         method: String,
         cardId: String? = null,
         discountCode: String? = null,
+        iyzicoPaymentId: String? = null,
     ): Result<PayRentalResponse> = runCatching {
         api.payRental(
             id = id,
@@ -77,6 +78,7 @@ class RentalRepository(
                 method = method,
                 cardId = cardId,
                 discountCode = discountCode?.takeIf { it.isNotBlank() },
+                iyzicoPaymentId = iyzicoPaymentId,
             ),
         )
     }

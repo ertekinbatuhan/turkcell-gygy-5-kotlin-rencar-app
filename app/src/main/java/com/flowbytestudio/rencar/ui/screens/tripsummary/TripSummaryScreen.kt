@@ -20,8 +20,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.CreditCard
+import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -179,6 +181,14 @@ fun TripSummaryScreen(
                     )
                 }
             }
+        }
+
+        uiState.iyzicoCheckoutUrl?.let { url ->
+            IyzicoCheckoutDialog(
+                url = url,
+                onReturnedToBackend = viewModel::onIyzicoWebViewReturnedToBackend,
+                onDismiss = viewModel::onIyzicoCheckoutCancelled,
+            )
         }
     }
 }
@@ -373,6 +383,15 @@ private fun PaymentSection(
                     onClick = { onMethodSelect(PaymentMethodOption.CARD) },
                     modifier = Modifier.weight(1f),
                 )
+                MethodChip(
+                    icon = Icons.Outlined.Language,
+                    title = "İyzico",
+                    subtitle = "Güvenli ödeme",
+                    subtitleColor = TextSecondary,
+                    selected = uiState.selectedMethod == PaymentMethodOption.IYZICO,
+                    onClick = { onMethodSelect(PaymentMethodOption.IYZICO) },
+                    modifier = Modifier.weight(1f),
+                )
             }
 
             if (uiState.selectedMethod == PaymentMethodOption.WALLET && uiState.walletInsufficient) {
@@ -405,31 +424,34 @@ private fun PaymentSection(
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
-            HorizontalDivider(color = Background, thickness = 1.dp)
-            Spacer(modifier = Modifier.height(14.dp))
+            // İyzico ödemesinde indirim kodu desteklenmiyor (spec: "IYZICO'da kullanılamaz").
+            if (uiState.selectedMethod != PaymentMethodOption.IYZICO) {
+                Spacer(modifier = Modifier.height(14.dp))
+                HorizontalDivider(color = Background, thickness = 1.dp)
+                Spacer(modifier = Modifier.height(14.dp))
 
-            Text(
-                text = "İndirim kodu",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = TextPrimary,
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = uiState.discountCode,
-                onValueChange = onDiscountCodeChange,
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Opsiyonel", color = TextSecondary.copy(alpha = 0.5f)) },
-                singleLine = true,
-                shape = RoundedCornerShape(14.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Primary,
-                    unfocusedBorderColor = BorderColor,
-                    focusedContainerColor = Surface,
-                    unfocusedContainerColor = Surface,
-                ),
-            )
+                Text(
+                    text = "İndirim kodu",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = uiState.discountCode,
+                    onValueChange = onDiscountCodeChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Opsiyonel", color = TextSecondary.copy(alpha = 0.5f)) },
+                    singleLine = true,
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Primary,
+                        unfocusedBorderColor = BorderColor,
+                        focusedContainerColor = Surface,
+                        unfocusedContainerColor = Surface,
+                    ),
+                )
+            }
         }
     }
 }
@@ -628,6 +650,7 @@ private fun PaidReceiptCard(uiState: TripSummaryUiState) {
 private fun methodLabel(method: String?): String = when (method) {
     "WALLET" -> "Cüzdan"
     "CARD" -> "Kart"
+    "IYZICO" -> "İyzico"
     else -> "—"
 }
 
@@ -656,4 +679,70 @@ private fun formatDuration(minutes: Int): String {
 private fun formatKm(km: Double): String {
     val turkish = Locale("tr", "TR")
     return if (km % 1.0 == 0.0) "${km.toInt()} km" else String.format(turkish, "%.1f km", km)
+}
+
+// İyzico'nun barındırdığı checkout sayfasını (paymentPageUrl) gösteren WebView diyaloğu.
+// Kart bilgisi bu ekranda hiç toplanmaz; kullanıcı kartını doğrudan İyzico'nun sayfasına
+// girer. Ödeme bitince WebView backend'in callback host'una (BACKEND_HOST) döner —
+// bu, akışın tamamlandığının tek güvenilir sinyalidir.
+private const val BACKEND_HOST = "rencarv2.halitkalayci.com"
+
+@Composable
+private fun IyzicoCheckoutDialog(
+    url: String,
+    onReturnedToBackend: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Column(modifier = Modifier.fillMaxSize().background(Surface)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = "İyzico ile öde",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary,
+                )
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = "Kapat",
+                    tint = TextSecondary,
+                    modifier = Modifier.clickable(onClick = onDismiss),
+                )
+            }
+            HorizontalDivider(color = Background, thickness = 1.dp)
+
+            androidx.compose.ui.viewinterop.AndroidView(
+                modifier = Modifier.fillMaxSize(),
+                factory = { context ->
+                    android.webkit.WebView(context).apply {
+                        settings.javaScriptEnabled = true
+                        settings.domStorageEnabled = true
+                        webViewClient = object : android.webkit.WebViewClient() {
+                            override fun onPageStarted(
+                                view: android.webkit.WebView?,
+                                loadedUrl: String?,
+                                favicon: android.graphics.Bitmap?,
+                            ) {
+                                super.onPageStarted(view, loadedUrl, favicon)
+                                val host = loadedUrl?.let { runCatching { java.net.URI(it).host }.getOrNull() }
+                                if (host == BACKEND_HOST) {
+                                    onReturnedToBackend()
+                                }
+                            }
+                        }
+                        loadUrl(url)
+                    }
+                },
+            )
+        }
+    }
 }

@@ -4,6 +4,7 @@ import com.flowbytestudio.rencar.data.auth.AuthApi
 import com.flowbytestudio.rencar.data.auth.AuthSession
 import com.flowbytestudio.rencar.data.cards.CardApi
 import com.flowbytestudio.rencar.data.geocoding.GeocodingApi
+import com.flowbytestudio.rencar.data.iyzico.IyzicoApi
 import com.flowbytestudio.rencar.data.license.LicenseApi
 import com.flowbytestudio.rencar.data.rentals.RentalApi
 import com.flowbytestudio.rencar.data.reservations.ReservationApi
@@ -87,4 +88,5 @@ object NetworkModule {
     val walletApi: WalletApi by lazy { retrofit.create(WalletApi::class.java) }
     val cardApi: CardApi by lazy { retrofit.create(CardApi::class.java) }
     val geocodingApi: GeocodingApi by lazy { geocodingRetrofit.create(GeocodingApi::class.java) }
+    val iyzicoApi: IyzicoApi by lazy { retrofit.create(IyzicoApi::class.java) }
 }

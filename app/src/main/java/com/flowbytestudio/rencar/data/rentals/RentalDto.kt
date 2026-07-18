@@ -85,11 +85,14 @@ data class RentalStatsResponse(
 
 @Serializable
 data class PayRentalRequest(
-    // WALLET / CARD
+    // WALLET / CARD / IYZICO
     val method: String,
-    // YALNIZ CARD yönteminde zorunlu; WALLET'ta gönderilirse 400.
+    // YALNIZ CARD yönteminde zorunlu; WALLET/IYZICO'da gönderilirse 400.
     val cardId: String? = null,
+    // IYZICO yönteminde kullanılamaz.
     val discountCode: String? = null,
+    // YALNIZ IYZICO yönteminde zorunlu — /iyzico/checkout-form/result'tan gelen paymentId.
+    val iyzicoPaymentId: String? = null,
 )
 
 @Serializable

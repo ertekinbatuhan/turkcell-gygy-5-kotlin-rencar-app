@@ -3,6 +3,7 @@ package com.flowbytestudio.rencar.ui.screens.tripsummary
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flowbytestudio.rencar.data.cards.CardRepository
+import com.flowbytestudio.rencar.data.iyzico.IyzicoRepository
 import com.flowbytestudio.rencar.data.rentals.RentalRepository
 import com.flowbytestudio.rencar.data.wallet.WalletRepository
 import java.util.Locale
@@ -18,6 +19,7 @@ class TripSummaryViewModel(
     private val rentalRepository: RentalRepository = RentalRepository(),
     private val walletRepository: WalletRepository = WalletRepository(),
     private val cardRepository: CardRepository = CardRepository(),
+    private val iyzicoRepository: IyzicoRepository = IyzicoRepository(),
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TripSummaryUiState())
@@ -83,6 +85,14 @@ class TripSummaryViewModel(
     fun pay() {
         val state = _uiState.value
         if (state.isPaying || !state.isPayable || !state.canPay) return
+        when (state.selectedMethod) {
+            PaymentMethodOption.IYZICO -> startIyzicoCheckout()
+            PaymentMethodOption.WALLET, PaymentMethodOption.CARD -> payDirect()
+        }
+    }
+
+    private fun payDirect() {
+        val state = _uiState.value
         val method = state.selectedMethod
         val cardId = if (method == PaymentMethodOption.CARD) state.selectedCardId else null
         val discountCode = state.discountCode.takeIf { it.isNotBlank() }
@@ -106,6 +116,82 @@ class TripSummaryViewModel(
                     _uiState.update { it.copy(isPaying = false, payError = message) }
                 }
         }
+    }
+
+    // --- İyzico Checkout Form akışı --------------------------------------------
+
+    private fun startIyzicoCheckout() {
+        val amount = _uiState.value.payableAmount ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isPaying = true, payError = null) }
+            iyzicoRepository.initializeCheckoutForm(rentalId, amount)
+                .onSuccess { response ->
+                    val url = response.paymentPageUrl
+                    if (url == null) {
+                        _uiState.update {
+                            it.copy(isPaying = false, payError = "Ödeme sayfası açılamadı. Lütfen tekrar dene.")
+                        }
+                        return@onSuccess
+                    }
+                    _uiState.update {
+                        it.copy(iyzicoCheckoutUrl = url, iyzicoToken = response.token)
+                    }
+                }
+                .onFailure {
+                    _uiState.update {
+                        it.copy(isPaying = false, payError = "Ödeme sayfası açılamadı. Lütfen tekrar dene.")
+                    }
+                }
+        }
+    }
+
+    // WebView, İyzico'nun barındırdığı sayfadan ayrılıp backend'in
+    // (rencarv2.halitkalayci.com/iyzico/checkout-form/callback) host'una döndüğünde
+    // ekran bunu çağırır: ödeme akışı tamamlanmış demektir, sonucu sorgularız.
+    fun onIyzicoWebViewReturnedToBackend() {
+        val token = _uiState.value.iyzicoToken ?: return
+        _uiState.update { it.copy(iyzicoCheckoutUrl = null) }
+        viewModelScope.launch {
+            iyzicoRepository.getCheckoutFormResult(token)
+                .onSuccess { result ->
+                    if (result.paymentStatus == "SUCCESS" && result.paymentId != null) {
+                        finalizeIyzicoPayment(result.paymentId)
+                    } else {
+                        _uiState.update {
+                            it.copy(isPaying = false, iyzicoToken = null, payError = "Ödeme tamamlanamadı.")
+                        }
+                    }
+                }
+                .onFailure {
+                    _uiState.update {
+                        it.copy(isPaying = false, iyzicoToken = null, payError = "Ödeme sonucu doğrulanamadı.")
+                    }
+                }
+        }
+    }
+
+    fun onIyzicoCheckoutCancelled() {
+        _uiState.update { it.copy(isPaying = false, iyzicoCheckoutUrl = null, iyzicoToken = null) }
+    }
+
+    private suspend fun finalizeIyzicoPayment(iyzicoPaymentId: String) {
+        rentalRepository.payRental(
+            id = rentalId,
+            method = PaymentMethodOption.IYZICO.name,
+            iyzicoPaymentId = iyzicoPaymentId,
+        )
+            .onSuccess { receipt ->
+                _uiState.update { it.copy(isPaying = false, iyzicoToken = null, receipt = receipt) }
+            }
+            .onFailure { throwable ->
+                _uiState.update {
+                    it.copy(
+                        isPaying = false,
+                        iyzicoToken = null,
+                        payError = throwable.toPayErrorMessage(discountProvided = false, walletInsufficient = false),
+                    )
+                }
+            }
     }
 }
 

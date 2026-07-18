@@ -4,8 +4,8 @@ import com.flowbytestudio.rencar.data.cards.CardDto
 import com.flowbytestudio.rencar.data.rentals.PayRentalResponse
 import com.flowbytestudio.rencar.data.rentals.RentalDto
 
-/** Fatura ekranındaki ödeme yöntemi seçimi. API'ye WALLET/CARD olarak gider. */
-enum class PaymentMethodOption { WALLET, CARD }
+/** Fatura ekranındaki ödeme yöntemi seçimi. API'ye WALLET/CARD/IYZICO olarak gider. */
+enum class PaymentMethodOption { WALLET, CARD, IYZICO }
 
 data class TripSummaryUiState(
     val isLoading: Boolean = true,
@@ -20,6 +20,10 @@ data class TripSummaryUiState(
     val discountCode: String = "",
     val isPaying: Boolean = false,
     val payError: String? = null,
+
+    // İyzico Checkout Form akışı: WebView açılırken dolar, sonuç gelene kadar sürer.
+    val iyzicoCheckoutUrl: String? = null,
+    val iyzicoToken: String? = null,
 
     // Bu oturumda ödeme alındığında dolan makbuz (paidAmount, kalan bakiye / kart).
     val receipt: PayRentalResponse? = null,
@@ -69,6 +73,7 @@ data class TripSummaryUiState(
             return when (selectedMethod) {
                 PaymentMethodOption.WALLET -> walletBalance != null && !walletInsufficient
                 PaymentMethodOption.CARD -> selectedCardId != null
+                PaymentMethodOption.IYZICO -> true
             }
         }
 }
